@@ -32,57 +32,60 @@ document.addEventListener('DOMContentLoaded', () => {
     let isDragging = false; // Flag to track if mouse is being dragged
 
     // --- Game State Variables for Simon Says Mechanic ---
+    // Updated 10-step master sequence with 'hold-button-X' actions
     const masterSequence = [
-        'button-1', 'up-swipe', 'button-2', 'left-swipe', 'speak', // 'speak' now requires a specific word
-        'button-3', 'down-swipe', 'button-4', 'right-swipe', 'button-1'
+        'hold-button-1', 'up-swipe', 'button-2', 'left-swipe', 'speak',
+        'hold-button-3', 'down-swipe', 'button-4', 'right-swipe', 'button-1'
     ];
     let currentRoundIndex = 0;
     let playerInputIndex = 0;
 
+    // --- Hold Button Variables ---
+    const holdTimers = {}; // Stores setTimeout IDs for each button
+    const buttonHoldState = { // Tracks the state of each button's hold
+        'button-1': { isHolding: false, isHeldForDuration: false },
+        'button-2': { isHolding: false, isHeldForDuration: false },
+        'button-3': { isHolding: false, isHeldForDuration: false },
+        'button-4': { isHolding: false, isHeldForDuration: false }
+    };
+    const HOLD_DURATION = 3000; // 3 seconds in milliseconds
+
     // --- Web Speech API Variables ---
-    // Check for browser compatibility for SpeechRecognition
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    let recognition = null; // Will be initialized if API is supported
+    let recognition = null;
 
     if (SpeechRecognition) {
         recognition = new SpeechRecognition();
-        recognition.continuous = false; // Stop after a single utterance
-        recognition.interimResults = false; // Only return final results
-        recognition.lang = 'en-US'; // Set language for recognition
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
 
-        // Event handler for when speech is recognized
         recognition.onresult = (event) => {
-            const transcript = event.results[0][0].transcript.toLowerCase().trim(); // Get recognized text
+            const transcript = event.results[0][0].transcript.toLowerCase().trim();
             console.log('Speech recognized:', transcript);
-            gameMessage.textContent = `You said: "${transcript}"`; // Show what was recognized
-            // Pass the recognized transcript directly to checkInput
+            gameMessage.textContent = `You said: "${transcript}"`;
             checkInput(transcript);
         };
 
-        // Event handler for when speech recognition ends (e.g., no more speech detected)
         recognition.onend = () => {
-            speakButton.textContent = 'Speak'; // Reset button text
-            speakButton.classList.remove('bg-red-500'); // Remove recording indicator color
+            speakButton.textContent = 'Speak';
+            speakButton.classList.remove('bg-red-500');
             console.log('Speech recognition ended.');
         };
 
-        // Event handler for errors
         recognition.onerror = (event) => {
-            speakButton.textContent = 'Speak'; // Reset button text
-            speakButton.classList.remove('bg-red-500'); // Remove recording indicator color
+            speakButton.textContent = 'Speak';
+            speakButton.classList.remove('bg-red-500');
             console.error('Speech recognition error:', event.error);
             gameMessage.textContent = `Speech error: ${event.error}. Try again.`;
-            // If the error is 'not-allowed' (user denied permission), instruct them
             if (event.error === 'not-allowed') {
                 alert('Microphone access denied. Please allow microphone permissions in your browser settings to use this feature.');
             }
-            // If speech was expected but nothing was heard, count it as an incorrect input
             if (masterSequence[playerInputIndex] === 'speak' && event.error === 'no-speech') {
-                checkInput('no-speech-detected'); // Treat as incorrect input if 'speak' was expected
+                checkInput('no-speech-detected');
             }
         };
     } else {
-        // Fallback if Web Speech API is not supported
         speakButton.disabled = true;
         speakButton.textContent = 'Speech Not Supported';
         gameMessage.textContent = 'Your browser does not support speech recognition.';
@@ -93,13 +96,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Screen Navigation Functions ---
 
     function showScreen(screenToShow) {
-        // Hide all screens first
         homepageScreen.classList.add('hidden');
         alienGameScreen.classList.add('hidden');
         solutionDisplayScreen.classList.add('hidden');
         confirmationModal.classList.add('hidden');
         feedbackOverlay.classList.add('hidden');
-        winScreen.classList.add('hidden'); // Ensure win screen is hidden
+        winScreen.classList.add('hidden');
         screenToShow.classList.remove('hidden');
     }
 
@@ -108,12 +110,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function initializeGame() {
         currentRoundIndex = 0;
         playerInputIndex = 0;
-        updateGameDisplay(); // Call to show the first step
+        updateGameDisplay();
         console.log(`New Game Started. Current target: ${masterSequence[currentRoundIndex]}`);
     }
 
     function updateGameDisplay() {
-        // Display the sequence up to the current round index
         const sequenceToShow = masterSequence.slice(0, currentRoundIndex + 1);
         sequenceDisplay.textContent = `Sequence: ${sequenceToShow.join(' -> ')}`;
         gameMessage.textContent = `Repeat the sequence of ${currentRoundIndex + 1} item(s).`;
@@ -123,46 +124,55 @@ document.addEventListener('DOMContentLoaded', () => {
     function showFeedback(isCorrect) {
         feedbackOverlay.classList.remove('hidden');
         if (isCorrect) {
-            feedbackOverlay.style.backgroundColor = 'rgba(0, 128, 0, 0.7)'; // Green overlay
+            feedbackOverlay.style.backgroundColor = 'rgba(0, 128, 0, 0.7)';
         } else {
-            feedbackOverlay.style.backgroundColor = 'rgba(255, 0, 0, 0.7)'; // Red overlay
+            feedbackOverlay.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
         }
 
         setTimeout(() => {
             feedbackOverlay.classList.add('hidden');
-            feedbackOverlay.style.backgroundColor = ''; // Clear background color
-        }, 500); // Hide after 0.5 seconds
+            feedbackOverlay.style.backgroundColor = '';
+        }, 500);
     }
 
     function checkInput(playerInput) {
         let expectedInput = masterSequence[playerInputIndex];
 
-        // Specific handling for 'speak' input type
+        // Special handling for 'speak' input type
         if (expectedInput === 'speak') {
-            const requiredWord = "alien"; // Define the word that must be spoken
+            const requiredWord = "alien";
 
             if (playerInput && playerInput !== 'no-speech-detected') {
-                // Check if the recognized transcript matches the required word
                 if (playerInput === requiredWord) {
-                    playerInput = 'speak'; // Normalize to 'speak' to match masterSequence
+                    playerInput = 'speak';
                 } else {
-                    // If speech was recognized but it's not the correct word
                     gameMessage.textContent = `You said "${playerInput}". Expected "${requiredWord}".`;
-                    playerInput = 'incorrect-speak-attempt'; // Force an incorrect input
+                    playerInput = 'incorrect-speak-attempt';
                 }
             } else {
-                // If no speech was detected or an error occurred during speech recognition, it's incorrect.
                 gameMessage.textContent = `No speech detected or an error occurred. Expected "${requiredWord}".`;
-                playerInput = 'incorrect-speak-attempt'; // Force an incorrect input
+                playerInput = 'incorrect-speak-attempt';
             }
         }
+
+        // Check for 'hold-button-X' inputs
+        if (expectedInput.startsWith('hold-button-')) {
+            // The playerInput for a hold will be 'hold-button-X-correct' or 'hold-button-X-incorrect'
+            if (playerInput === expectedInput + '-correct') {
+                playerInput = expectedInput; // Normalize to match masterSequence for success
+            } else {
+                gameMessage.textContent = `Incorrect hold for ${expectedInput.replace('hold-', '')}.`;
+                playerInput = 'incorrect-hold-attempt'; // Force an incorrect input
+            }
+        }
+
 
         if (playerInput === masterSequence[playerInputIndex]) {
             console.log(`Correct! Input: ${playerInput}, Expected: ${masterSequence[playerInputIndex]}`);
             playerInputIndex++;
-            showFeedback(true); // Show green screen
+            showFeedback(true);
 
-            setTimeout(() => { // Delay next action until feedback screen is gone
+            setTimeout(() => {
                 if (playerInputIndex > currentRoundIndex) {
                     console.log(`Round ${currentRoundIndex + 1} completed!`);
                     currentRoundIndex++;
@@ -171,26 +181,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (currentRoundIndex === masterSequence.length) {
                         gameMessage.textContent = 'Congratulations! You solved the entire sequence!';
                         console.log('Game Won!');
-                        showScreen(winScreen); // Show win screen
+                        showScreen(winScreen);
                         setTimeout(() => {
-                            showScreen(homepageScreen); // Go back to homepage after 3 seconds
-                        }, 3000); // Display "You Win!" for 3 seconds
+                            showScreen(homepageScreen);
+                        }, 3000);
                     } else {
-                        updateGameDisplay(); // Update display for the new round
+                        updateGameDisplay();
                     }
                 } else {
                     gameMessage.textContent = `Correct! Enter the next item.`;
                 }
-            }, 500); // Match feedback duration
+            }, 500);
         } else {
             console.log(`Incorrect! You entered "${playerInput}", but expected "${masterSequence[playerInputIndex]}".`);
-            showFeedback(false); // Show red screen
+            showFeedback(false);
 
-            setTimeout(() => { // Delay reset until feedback screen is gone
+            setTimeout(() => {
                 gameMessage.textContent = `Incorrect! Sequence reset. Repeat the sequence of ${currentRoundIndex + 1} item(s).`;
-                playerInputIndex = 0; // Reset player input for the current round
+                playerInputIndex = 0;
                 console.log('Sequence reset. Player must try again from the start of the current round.');
-            }, 500); // Match feedback duration
+            }, 500);
         }
     }
 
@@ -220,7 +230,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     solutionBackButton.addEventListener('click', () => {
-        // Reset game state before showing confirmation modal
         currentRoundIndex = 0;
         playerInputIndex = 0;
         confirmationModal.classList.remove('hidden');
@@ -232,14 +241,60 @@ document.addEventListener('DOMContentLoaded', () => {
 
     confirmNoButton.addEventListener('click', () => {
         confirmationModal.classList.add('hidden');
-        initializeGame(); // Re-initialize the game to start fresh if they choose to keep playing
+        initializeGame();
     });
 
-    // --- Numbered Buttons Logic ---
-    button1.addEventListener('click', () => checkInput('button-1'));
-    button2.addEventListener('click', () => checkInput('button-2'));
-    button3.addEventListener('click', () => checkInput('button-3'));
-    button4.addEventListener('click', () => checkInput('button-4'));
+    // --- Numbered Buttons Logic (Updated for hold feature) ---
+    const numberButtons = [button1, button2, button3, button4];
+
+    numberButtons.forEach(button => {
+        const buttonId = button.id; // e.g., 'button-1'
+
+        // Mouse down / Touch start
+        button.addEventListener('mousedown', (e) => startHold(e, buttonId));
+        button.addEventListener('touchstart', (e) => startHold(e, buttonId), { passive: false });
+
+        // Mouse up / Touch end
+        button.addEventListener('mouseup', () => endHold(buttonId));
+        button.addEventListener('touchend', () => endHold(buttonId));
+        button.addEventListener('mouseleave', () => { // If mouse leaves button while holding
+            if (buttonHoldState[buttonId].isHolding) {
+                endHold(buttonId, true); // Treat as release, potentially incorrect
+            }
+        });
+    });
+
+    function startHold(e, buttonId) {
+        e.preventDefault(); // Prevent default browser actions (e.g., text selection)
+        buttonHoldState[buttonId].isHolding = true;
+        buttonHoldState[buttonId].isHeldForDuration = false; // Reset for new hold
+
+        // Start a timer to check if held for the required duration
+        holdTimers[buttonId] = setTimeout(() => {
+            buttonHoldState[buttonId].isHeldForDuration = true;
+            console.log(`${buttonId} held for ${HOLD_DURATION / 1000} seconds!`);
+            // Visual feedback for successful hold could go here
+            // e.g., button.style.borderColor = 'gold';
+        }, HOLD_DURATION);
+
+        console.log(`Started holding ${buttonId}`);
+    }
+
+    function endHold(buttonId, wasMouseLeave = false) {
+        if (!buttonHoldState[buttonId].isHolding) return; // Not holding, so ignore release
+
+        clearTimeout(holdTimers[buttonId]); // Stop the timer
+
+        const heldCorrectly = buttonHoldState[buttonId].isHeldForDuration;
+        buttonHoldState[buttonId].isHolding = false; // Reset holding state
+
+        // Determine the input string based on whether it was held correctly
+        const inputString = heldCorrectly ? `hold-${buttonId}-correct` : `hold-${buttonId}-incorrect`;
+
+        console.log(`Released ${buttonId}. Held correctly: ${heldCorrectly}. Input: ${inputString}`);
+        checkInput(inputString);
+    }
+
 
     // --- Swipe Area Logic (Updated for both touch and mouse) ---
     swipeArea.addEventListener('touchstart', (e) => {
