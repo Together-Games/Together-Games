@@ -300,20 +300,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Drag and Drop Functions ---
     function resetDragButtonPosition() {
-        dragStartButton.style.left = '50%';
-        dragStartButton.style.top = '50%';
-        dragStartButton.style.transform = 'translate(-50%, -50%)';
+        // Get the bounding rect of the drag board to center the button relative to it
+        const boardRect = dragBoard.getBoundingClientRect();
+        const buttonWidth = dragStartButton.offsetWidth;
+        const buttonHeight = dragStartButton.offsetHeight;
+
+        // Calculate center position relative to the board
+        const centerX = (boardRect.width / 2) - (buttonWidth / 2);
+        const centerY = (boardRect.height / 2) - (buttonHeight / 2);
+
+        dragStartButton.style.position = 'absolute'; // Ensure absolute positioning
+        dragStartButton.style.left = centerX + 'px';
+        dragStartButton.style.top = centerY + 'px';
+        dragStartButton.style.transform = 'none'; // Remove any previous transforms
         dragStartButton.classList.remove('opacity-50'); // Ensure full opacity
         removeTargetHighlights();
     }
 
     function getElementRect(el) {
         const rect = el.getBoundingClientRect();
+        // Return rect relative to the viewport, as clientX/Y are also relative to viewport
         return {
-            left: rect.left + window.scrollX,
-            top: rect.top + window.scrollY,
-            right: rect.right + window.scrollX,
-            bottom: rect.bottom + window.scrollY,
+            left: rect.left,
+            top: rect.top,
+            right: rect.right,
+            bottom: rect.bottom,
             width: rect.width,
             height: rect.height
         };
@@ -332,20 +343,18 @@ document.addEventListener('DOMContentLoaded', () => {
             dragStartButton.classList.add('opacity-50', 'transition-none'); // Add visual feedback for dragging
             dragStartButton.style.cursor = 'grabbing';
 
-            // Calculate offset relative to the element's top-left corner
+            // Get clientX/Y based on event type (mouse or touch)
             const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
             const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+
+            // Calculate offset relative to the element's top-left corner
             const rect = dragStartButton.getBoundingClientRect();
             dragOffsetX = clientX - rect.left;
             dragOffsetY = clientY - rect.top;
 
-            // Set initial position to prevent jump
-            dragStartButton.style.position = 'absolute';
-            dragStartButton.style.left = (clientX - dragOffsetX) + 'px';
-            dragStartButton.style.top = (clientY - dragOffsetY) + 'px';
-            dragStartButton.style.transform = 'none'; // Remove initial transform for precise positioning
-
             // Add global listeners for dragging
+            // Important: Use `window` or `document` for `mousemove`/`touchmove` and `mouseup`/`touchend`
+            // to ensure tracking continues even if the cursor/finger leaves the draggable element.
             document.addEventListener('mousemove', doDrag);
             document.addEventListener('mouseup', endDrag);
             document.addEventListener('touchmove', doDrag, { passive: false });
@@ -363,9 +372,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
         const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
 
-        // Position the draggable button
-        dragStartButton.style.left = (clientX - dragOffsetX) + 'px';
-        dragStartButton.style.top = (clientY - dragOffsetY) + 'px';
+        // Get the dragBoard's position to calculate relative positioning
+        const boardRect = dragBoard.getBoundingClientRect();
+
+        // Calculate new position relative to the dragBoard's top-left
+        let newLeft = clientX - dragOffsetX - boardRect.left;
+        let newTop = clientY - dragOffsetY - boardRect.top;
+
+        // Constrain the draggable button within the dragBoard boundaries
+        const buttonWidth = dragStartButton.offsetWidth;
+        const buttonHeight = dragStartButton.offsetHeight;
+
+        newLeft = Math.max(0, Math.min(newLeft, boardRect.width - buttonWidth));
+        newTop = Math.max(0, Math.min(newTop, boardRect.height - buttonHeight));
+
+        // Apply position
+        dragStartButton.style.left = newLeft + 'px';
+        dragStartButton.style.top = newTop + 'px';
 
         const draggableRect = getElementRect(dragStartButton);
         let hoveredTarget = null;
