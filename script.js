@@ -28,7 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const button3 = document.getElementById('button-3');
     const button4 = document.getElementById('button-4');
 
-    let startX, startY; // Variables for swipe detection
+    let startX, startY; // Variables for swipe/drag detection
+    let isDragging = false; // Flag to track if mouse is being dragged
 
     // --- Game State Variables for Simon Says Mechanic ---
     const masterSequence = [
@@ -151,6 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else {
                 // If no speech was detected or an error occurred during speech recognition, it's incorrect.
+                gameMessage.textContent = `No speech detected or an error occurred. Expected "${requiredWord}".`;
                 playerInput = 'incorrect-speak-attempt'; // Force an incorrect input
             }
         }
@@ -239,12 +241,13 @@ document.addEventListener('DOMContentLoaded', () => {
     button3.addEventListener('click', () => checkInput('button-3'));
     button4.addEventListener('click', () => checkInput('button-4'));
 
-    // --- Swipe Area Logic ---
+    // --- Swipe Area Logic (Updated for both touch and mouse) ---
     swipeArea.addEventListener('touchstart', (e) => {
+        e.preventDefault(); // Prevent scrolling on touch
         startX = e.touches[0].clientX;
         startY = e.touches[0].clientY;
         swipeArea.textContent = 'Swiping...';
-    });
+    }, { passive: false });
 
     swipeArea.addEventListener('touchend', (e) => {
         if (startX === null || startY === null) return;
@@ -273,12 +276,54 @@ document.addEventListener('DOMContentLoaded', () => {
         startY = null;
     });
 
-    swipeArea.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-    }, { passive: false });
+    // Mouse events for swipe area
+    swipeArea.addEventListener('mousedown', (e) => {
+        e.preventDefault(); // Prevent default browser drag behavior
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        swipeArea.textContent = 'Dragging...';
+    });
+
+    // Listen for mouseup on the document to ensure swipe ends even if mouse leaves swipeArea
+    document.addEventListener('mouseup', (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+
+        const endX = e.clientX;
+        const endY = e.clientY;
+
+        const diffX = endX - startX;
+        const diffY = endY - startY;
+
+        const sensitivity = 30;
+
+        let swipeDirection = 'No swipe detected';
+
+        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > sensitivity) {
+            swipeDirection = diffX > 0 ? 'right-swipe' : 'left-swipe';
+        } else if (Math.abs(diffY) > Math.abs(diffX) && Math.abs(diffY) > sensitivity) {
+            swipeDirection = diffY > 0 ? 'down-swipe' : 'up-swipe';
+        }
+
+        swipeArea.textContent = swipeDirection;
+        console.log(swipeDirection);
+        checkInput(swipeDirection);
+
+        startX = null;
+        startY = null;
+    });
+
+    // Optional: mousemove to show dragging, but actual swipe check is on mouseup
+    swipeArea.addEventListener('mousemove', (e) => {
+        if (isDragging) {
+            // Can add visual feedback for dragging here if desired
+            // e.g., change background color slightly
+        }
+    });
+
 
     // --- Speak Button Logic (Updated for press and hold) ---
-    // Removed the direct 'click' listener to avoid conflicts.
     speakButton.addEventListener('mousedown', startSpeechRecognition); // For desktop
     speakButton.addEventListener('mouseup', stopSpeechRecognition);   // For desktop
     speakButton.addEventListener('touchstart', startSpeechRecognition, { passive: false }); // For mobile, added passive: false
