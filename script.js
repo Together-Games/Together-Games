@@ -35,11 +35,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Game State Variables for Simon Says Mechanic ---
     const masterSequence = [
         'hold-button-1', // Single button hold (2 seconds)
-        'up-swipe',
+        'hold-two-buttons-1-3',
         'button-2', // Single press
         'left-swipe',
         'speak', // Say "alien"
-        'hold-two-buttons-1-3', // New: Hold button-1 and button-3 simultaneously (no duration)
+        'up-swipe', // New: Hold button-1 and button-3 simultaneously (no duration)
         'down-swipe',
         'button-4', // Single press
         'right-swipe',
