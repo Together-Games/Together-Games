@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Game State Variables for Simon Says Mechanic ---
     const masterSequence = [
-        'button-1', 'up-swipe', 'button-2', 'left-swipe', 'speak',
+        'button-1', 'up-swipe', 'button-2', 'left-swipe', 'speak', // 'speak' now requires a specific word
         'button-3', 'down-swipe', 'button-4', 'right-swipe', 'button-1'
     ];
     let currentRoundIndex = 0;
@@ -138,15 +138,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Specific handling for 'speak' input type
         if (expectedInput === 'speak') {
-            // If the expected input is 'speak', we check if playerInput is a valid recognized speech string.
-            // A non-empty string means speech was recognized. 'no-speech-detected' means an error occurred.
+            const requiredWord = "alien"; // Define the word that must be spoken
+
             if (playerInput && playerInput !== 'no-speech-detected') {
-                // For now, any recognized speech counts as correct for 'speak' step.
-                // In a real game, you'd check if `playerInput` matches a specific word/phrase.
-                playerInput = 'speak'; // Normalize to 'speak' to match masterSequence
+                // Check if the recognized transcript matches the required word
+                if (playerInput === requiredWord) {
+                    playerInput = 'speak'; // Normalize to 'speak' to match masterSequence
+                } else {
+                    // If speech was recognized but it's not the correct word
+                    gameMessage.textContent = `You said "${playerInput}". Expected "${requiredWord}".`;
+                    playerInput = 'incorrect-speak-attempt'; // Force an incorrect input
+                }
             } else {
                 // If no speech was detected or an error occurred during speech recognition, it's incorrect.
-                playerInput = 'incorrect-speak-attempt'; // Force an incorrect input to trigger else block
+                playerInput = 'incorrect-speak-attempt'; // Force an incorrect input
             }
         }
 
