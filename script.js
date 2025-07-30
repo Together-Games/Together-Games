@@ -27,21 +27,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const button2 = document.getElementById('button-2');
     const button3 = document.getElementById('button-3');
     const button4 = document.getElementById('button-4');
+    const numberButtons = [button1, button2, button3, button4]; // Array for easy iteration
 
     let startX, startY; // Variables for swipe/drag detection
     let isDragging = false; // Flag to track if mouse is being dragged
 
     // --- Game State Variables for Simon Says Mechanic ---
-    // Updated 10-step master sequence with 'hold-button-X' actions
+    // Updated 10-step master sequence with 'hold-button-X' and 'hold-all-4-buttons' actions
     const masterSequence = [
-        'hold-button-1', 'up-swipe', 'button-2', 'left-swipe', 'speak',
-        'hold-button-3', 'down-swipe', 'button-4', 'right-swipe', 'button-1'
+        'hold-button-1', 'hold-all-4-buttons', 'button-2', 'left-swipe', 'speak',
+        'up-swipe', 'down-swipe', 'button-4', 'right-swipe', 'button-1'
     ];
     let currentRoundIndex = 0;
     let playerInputIndex = 0;
 
     // --- Hold Button Variables ---
-    const holdTimers = {}; // Stores setTimeout IDs for each button
+    const holdTimers = {}; // Stores setTimeout IDs for individual button holds
     const buttonHoldState = { // Tracks the state of each button's hold
         'button-1': { isHolding: false, isHeldForDuration: false },
         'button-2': { isHolding: false, isHeldForDuration: false },
@@ -49,6 +50,11 @@ document.addEventListener('DOMContentLoaded', () => {
         'button-4': { isHolding: false, isHeldForDuration: false }
     };
     const HOLD_DURATION = 3000; // 3 seconds in milliseconds
+
+    // --- Multi-Button Hold Variables ---
+    const activeHeldButtons = new Set(); // Stores IDs of buttons currently pressed down
+    let multiButtonHoldTimer = null;
+    let multiButtonHoldAchieved = false; // True if all 4 buttons were held for 3 seconds
 
     // --- Web Speech API Variables ---
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -155,14 +161,23 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Check for 'hold-button-X' inputs
+        // Check for 'hold-button-X' inputs (single button hold)
         if (expectedInput.startsWith('hold-button-')) {
-            // The playerInput for a hold will be 'hold-button-X-correct' or 'hold-button-X-incorrect'
             if (playerInput === expectedInput + '-correct') {
                 playerInput = expectedInput; // Normalize to match masterSequence for success
             } else {
                 gameMessage.textContent = `Incorrect hold for ${expectedInput.replace('hold-', '')}.`;
                 playerInput = 'incorrect-hold-attempt'; // Force an incorrect input
+            }
+        }
+
+        // Check for 'hold-all-4-buttons' input (multi-button hold)
+        if (expectedInput === 'hold-all-4-buttons') {
+            if (playerInput === 'multi-hold-4-correct') {
+                playerInput = expectedInput; // Normalize to match masterSequence for success
+            } else {
+                gameMessage.textContent = `Incorrect multi-button hold.`;
+                playerInput = 'incorrect-multi-hold-attempt'; // Force an incorrect input
             }
         }
 
@@ -244,9 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
         initializeGame();
     });
 
-    // --- Numbered Buttons Logic (Updated for hold feature) ---
-    const numberButtons = [button1, button2, button3, button4];
-
+    // --- Numbered Buttons Logic (Updated for single and multi-hold) ---
     numberButtons.forEach(button => {
         const buttonId = button.id; // e.g., 'button-1'
 
@@ -268,31 +281,53 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault(); // Prevent default browser actions (e.g., text selection)
         buttonHoldState[buttonId].isHolding = true;
         buttonHoldState[buttonId].isHeldForDuration = false; // Reset for new hold
+        activeHeldButtons.add(buttonId); // Add to set of currently held buttons
 
-        // Start a timer to check if held for the required duration
+        // Start individual button timer (for 'hold-button-X' actions)
         holdTimers[buttonId] = setTimeout(() => {
             buttonHoldState[buttonId].isHeldForDuration = true;
             console.log(`${buttonId} held for ${HOLD_DURATION / 1000} seconds!`);
-            // Visual feedback for successful hold could go here
-            // e.g., button.style.borderColor = 'gold';
         }, HOLD_DURATION);
 
-        console.log(`Started holding ${buttonId}`);
+        console.log(`Started holding ${buttonId}. Active holds: ${activeHeldButtons.size}`);
+
+        // Check for multi-button hold start if expected
+        if (masterSequence[playerInputIndex] === 'hold-all-4-buttons' && activeHeldButtons.size === 4) {
+            if (!multiButtonHoldTimer) { // Start overall multi-hold timer only if not already running
+                multiButtonHoldTimer = setTimeout(() => {
+                    multiButtonHoldAchieved = true;
+                    console.log('All 4 buttons held simultaneously for 3 seconds!');
+                }, HOLD_DURATION);
+                gameMessage.textContent = 'Holding all 4 buttons...';
+            }
+        }
     }
 
     function endHold(buttonId, wasMouseLeave = false) {
         if (!buttonHoldState[buttonId].isHolding) return; // Not holding, so ignore release
 
-        clearTimeout(holdTimers[buttonId]); // Stop the timer
-
-        const heldCorrectly = buttonHoldState[buttonId].isHeldForDuration;
+        clearTimeout(holdTimers[buttonId]); // Stop the individual button timer
         buttonHoldState[buttonId].isHolding = false; // Reset holding state
+        activeHeldButtons.delete(buttonId); // Remove from set of currently held buttons
 
-        // Determine the input string based on whether it was held correctly
-        const inputString = heldCorrectly ? `hold-${buttonId}-correct` : `hold-${buttonId}-incorrect`;
+        console.log(`Released ${buttonId}. Active holds: ${activeHeldButtons.size}`);
 
-        console.log(`Released ${buttonId}. Held correctly: ${heldCorrectly}. Input: ${inputString}`);
-        checkInput(inputString);
+        // Check if this was the last button released in a potential multi-hold
+        if (masterSequence[playerInputIndex] === 'hold-all-4-buttons' && activeHeldButtons.size === 0) {
+            clearTimeout(multiButtonHoldTimer); // Stop the overall multi-hold timer
+            const inputString = multiButtonHoldAchieved ? 'multi-hold-4-correct' : 'multi-hold-4-incorrect';
+            console.log(`All multi-hold buttons released. Result: ${inputString}`);
+            checkInput(inputString);
+            multiButtonHoldAchieved = false; // Reset for next attempt
+            multiButtonHoldTimer = null; // Reset timer ID
+        } else if (masterSequence[playerInputIndex].startsWith('hold-button-')) {
+            // If the current expected input is a single button hold, process it here
+            // This ensures single holds are checked immediately on release if that's the current step
+            const heldCorrectly = buttonHoldState[buttonId].isHeldForDuration;
+            const inputString = heldCorrectly ? `hold-${buttonId}-correct` : `hold-${buttonId}-incorrect`;
+            console.log(`Released ${buttonId}. Held correctly: ${heldCorrectly}. Input: ${inputString}`);
+            checkInput(inputString);
+        }
     }
 
 
