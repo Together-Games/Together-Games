@@ -33,7 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let isDragging = false; // Flag to track if mouse is being dragged
 
     // --- Game State Variables for Simon Says Mechanic ---
-    // Updated 10-step master sequence with 'hold-button-X' and 'hold-two-buttons' actions
     const masterSequence = [
         'hold-button-1', // Single button hold (2 seconds)
         'up-swipe',
@@ -62,6 +61,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Multi-Button Hold Variables (for specific two-button hold) ---
     const activeHeldButtons = new Set(); // Stores IDs of buttons currently pressed down
     let twoButtonsHeldCorrectlyThisAttempt = false; // Flag for multi-button correctness
+
+    // --- Countdown Timer Variables ---
+    const countdownDisplay = document.getElementById('countdown-display');
+    const countdownTimerSpan = document.getElementById('countdown-timer');
+    let countdownInterval = null; // Stores the setInterval ID for the countdown
 
     // --- Web Speech API Variables ---
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -115,6 +119,8 @@ document.addEventListener('DOMContentLoaded', () => {
         confirmationModal.classList.add('hidden');
         feedbackOverlay.classList.add('hidden');
         winScreen.classList.add('hidden');
+        countdownDisplay.classList.add('hidden'); // Hide countdown when changing screens
+        clearInterval(countdownInterval); // Clear any active countdown
         screenToShow.classList.remove('hidden');
     }
 
@@ -193,6 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log(`Correct! Input: ${playerInput}, Expected: ${masterSequence[playerInputIndex]}`);
             playerInputIndex++;
             showFeedback(true);
+            stopCountdown(); // Stop countdown on correct input
 
             setTimeout(() => {
                 if (playerInputIndex > currentRoundIndex) {
@@ -217,6 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             console.log(`Incorrect! You entered "${playerInput}", but expected "${masterSequence[playerInputIndex]}".`);
             showFeedback(false);
+            stopCountdown(); // Stop countdown on incorrect input
 
             setTimeout(() => {
                 gameMessage.textContent = `Incorrect! Sequence reset. Repeat the sequence of ${currentRoundIndex + 1} item(s).`;
@@ -225,6 +233,30 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 500);
         }
     }
+
+    // --- Countdown Timer Functions ---
+    function startCountdown() {
+        let timeLeft = HOLD_DURATION / 1000; // Convert to seconds
+        countdownTimerSpan.textContent = timeLeft;
+        countdownDisplay.classList.remove('hidden');
+
+        clearInterval(countdownInterval); // Clear any existing interval
+        countdownInterval = setInterval(() => {
+            timeLeft--;
+            countdownTimerSpan.textContent = timeLeft;
+            if (timeLeft <= 0) {
+                clearInterval(countdownInterval);
+                // The hold logic already handles correctness, this is just visual
+            }
+        }, 1000); // Update every second
+    }
+
+    function stopCountdown() {
+        clearInterval(countdownInterval);
+        countdownDisplay.classList.add('hidden');
+        countdownTimerSpan.textContent = '';
+    }
+
 
     // --- Event Listeners ---
 
@@ -296,6 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 buttonHoldState[buttonId].isHeldForDuration = true;
                 console.log(`${buttonId} held for ${HOLD_DURATION / 1000} seconds!`);
             }, HOLD_DURATION);
+            startCountdown(); // Start countdown for single hold
         }
 
         console.log(`Started holding ${buttonId}. Active holds: ${Array.from(activeHeldButtons).join(', ')}`);
@@ -309,8 +342,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (allRequiredPressed && noExtraButtons) {
                 twoButtonsHeldCorrectlyThisAttempt = true;
                 gameMessage.textContent = 'Holding button 1 and 3...';
+                // Only start countdown if it's not already running for this multi-hold attempt
+                if (countdownInterval === null) {
+                    startCountdown(); // Start countdown for multi-hold
+                }
             } else {
                 twoButtonsHeldCorrectlyThisAttempt = false; // Reset if incorrect combination
+                stopCountdown(); // Stop countdown if combination is broken
             }
         }
     }
@@ -326,24 +364,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Check if the current expected input is a multi-button hold
         if (masterSequence[playerInputIndex] === 'hold-two-buttons-1-3') {
-            // This logic triggers when ANY button is released if a multi-hold is expected.
-            // We only check correctness if all relevant buttons are released (activeHeldButtons.size === 0)
-            // or if the released button was one of the required ones and now the count is wrong.
-            // For this type of simultaneous press-and-release, we check on the *last* button release.
             const requiredButtons = new Set(['button-1', 'button-3']);
             const allReleased = activeHeldButtons.size === 0;
 
-            // Only evaluate the multi-hold attempt when all buttons involved in the attempt are released
-            // or if a required button was released prematurely.
             if (allReleased || (requiredButtons.has(buttonId) && activeHeldButtons.size < requiredButtons.size)) {
-                // If it was correctly held (all 2 required buttons pressed and no others)
-                // AND all those buttons are now released.
                 if (twoButtonsHeldCorrectlyThisAttempt && allReleased) {
                     checkInput('multi-hold-2-correct');
                 } else {
                     checkInput('multi-hold-2-incorrect');
                 }
                 twoButtonsHeldCorrectlyThisAttempt = false; // Reset for next attempt
+                stopCountdown(); // Stop countdown on multi-hold release
             }
         } else if (masterSequence[playerInputIndex].startsWith('hold-button-')) {
             // If the current expected input is a single button hold, process it here
@@ -351,6 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const inputString = heldCorrectly ? `hold-${buttonId}-correct` : `hold-${buttonId}-incorrect`;
             console.log(`Released ${buttonId}. Held correctly: ${heldCorrectly}. Input: ${inputString}`);
             checkInput(inputString);
+            stopCountdown(); // Stop countdown on single hold release
         }
     }
 
