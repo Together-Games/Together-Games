@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Together Games</title>
+    <!-- Link to Tailwind CSS for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Link to your custom stylesheet -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Use Inter font for a clean look -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="font-inter bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div id="app-container" class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md text-center">
+        <!-- Homepage Screen -->
+        <div id="homepage-screen" class="screen">
+            <h1 class="text-4xl font-bold text-gray-800 mb-8">Together Games</h1>
+
+            <div class="space-y-4">
+                <button id="alien-button" class="game-button bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg w-full shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                    Alien
+                </button>
+                <button class="game-button bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg w-full shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                    <!-- Second game button (empty for now) -->
+                </button>
+                <button class="game-button bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg w-full shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                    <!-- Third game button (empty for now) -->
+                </button>
+            </div>
+        </div>
+
+        <!-- Alien Game Screen (initially hidden) -->
+        <div id="alien-game-screen" class="screen hidden">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6">Enter Solution Number</h2>
+
+            <input type="number" id="solution-number-input" placeholder="e.g., 12345" class="w-full p-3 border border-gray-300 rounded-lg text-lg text-center mb-6 focus:outline-none focus:ring-2 focus:ring-purple-500">
+
+            <button id="start-game-button" class="game-button bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                Start
+            </button>
+        </div>
+    </div>
+
+    <!-- Link to your JavaScript file -->
+    <script src="script.js"></script>
+</body>
+</html>
