@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const button1 = document.getElementById('button-1');
     const button2 = document.getElementById('button-2');
     const button3 = document.getElementById('button-3');
-    const button4 = document = document.getElementById('button-4');
+    const button4 = document.getElementById('button-4');
     const numberButtons = [button1, button2, button3, button4]; // Array for easy iteration
 
     let startX, startY; // Variables for swipe/drag detection
@@ -35,11 +35,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Game State Variables for Simon Says Mechanic ---
     const masterSequence = [
         'hold-button-1', // Single button hold (2 seconds)
-        'hold-two-buttons-1-3',
+        'up-swipe',
         'button-2', // Single press
         'left-swipe',
         'speak', // Say "alien"
-        'up-swipe', // New: Hold button-1 and button-3 simultaneously (no duration)
+        'hold-two-buttons-1-3', // New: Hold button-1 and button-3 simultaneously (no duration)
         'down-swipe',
         'button-4', // Single press
         'right-swipe',
@@ -61,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Multi-Button Hold Variables (for specific two-button hold) ---
     const activeHeldButtons = new Set(); // Stores IDs of buttons currently pressed down
     let twoButtonsHeldCorrectlyThisAttempt = false; // Flag for multi-button correctness
+    let multiHoldEvaluatedThisRound = false; // New flag to prevent multiple checkInput calls for multi-hold
 
     // --- Countdown Timer Variables ---
     const countdownDisplay = document.getElementById('countdown-display');
@@ -129,6 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function initializeGame() {
         currentRoundIndex = 0;
         playerInputIndex = 0;
+        multiHoldEvaluatedThisRound = false; // Reset multi-hold flag for new game
         updateGameDisplay(); // Call to show the first step
         console.log(`New Game Started. Current target: ${masterSequence[currentRoundIndex]}`);
     }
@@ -219,6 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log(`Round ${currentRoundIndex + 1} completed!`);
                     currentRoundIndex++;
                     playerInputIndex = 0; // Reset player input for the new round
+                    multiHoldEvaluatedThisRound = false; // Reset for next round
 
                     if (currentRoundIndex === masterSequence.length) {
                         gameMessage.textContent = 'Congratulations! You solved the entire sequence!';
@@ -244,6 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 gameMessage.textContent = `Incorrect! Sequence reset. Repeat the sequence of ${currentRoundIndex + 1} item(s).`;
                 playerInputIndex = 0; // Reset player input for the current round
+                multiHoldEvaluatedThisRound = false; // Reset for next attempt
                 console.log('Sequence reset. Player must try again from the start of the current round.');
             }, 500);
         }
@@ -359,11 +363,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 gameMessage.textContent = 'Holding button 1 and 3...';
                 // Only start countdown if it's not already running for this multi-hold attempt
                 if (countdownInterval === null) {
-                    startCountdown(); // Start countdown for multi-hold
+                    startCountdown(); // Start countdown for multi-hold (visual only, no duration required for correctness)
                 }
             } else {
                 twoButtonsHeldCorrectlyThisAttempt = false; // Reset if incorrect combination
                 stopCountdown(); // Stop countdown if combination is broken
+                // If the combination is broken, and it hasn't been evaluated yet, mark incorrect immediately
+                if (!multiHoldEvaluatedThisRound) {
+                    checkInput('multi-hold-2-incorrect');
+                    multiHoldEvaluatedThisRound = true; // Prevent further checks for this attempt
+                }
             }
         }
     }
@@ -380,17 +389,19 @@ document.addEventListener('DOMContentLoaded', () => {
         // Check if the current expected input is a multi-button hold
         if (masterSequence[playerInputIndex] === 'hold-two-buttons-1-3') {
             const requiredButtons = new Set(['button-1', 'button-3']);
-            const allReleased = activeHeldButtons.size === 0;
 
-            if (allReleased || (requiredButtons.has(buttonId) && activeHeldButtons.size < requiredButtons.size)) {
-                if (twoButtonsHeldCorrectlyThisAttempt && allReleased) {
+            // If the released button is one of the required buttons AND the multi-hold hasn't been evaluated yet
+            if (requiredButtons.has(buttonId) && !multiHoldEvaluatedThisRound) {
+                if (twoButtonsHeldCorrectlyThisAttempt) {
                     checkInput('multi-hold-2-correct');
                 } else {
                     checkInput('multi-hold-2-incorrect');
                 }
+                multiHoldEvaluatedThisRound = true; // Mark as evaluated for this round
                 twoButtonsHeldCorrectlyThisAttempt = false; // Reset for next attempt
-                stopCountdown(); // Stop countdown on multi-hold release
+                stopCountdown(); // Stop countdown
             }
+            // If it's not a required button, or already evaluated, do nothing here for multi-hold.
         } else if (masterSequence[playerInputIndex].startsWith('hold-button-')) {
             // If the current expected input is a single button hold, process it here
             const heldCorrectly = buttonHoldState[buttonId].isHeldForDuration;
