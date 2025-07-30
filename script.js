@@ -16,7 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const gameMessage = document.getElementById('game-message');
     const sequenceDisplay = document.getElementById('sequence-display');
     const solutionBackButton = document.getElementById('solution-back-button');
-    const swipeArea = document.getElementById('swipe-area');
     const speakButton = document.getElementById('speak-button');
 
     const confirmYesButton = document.getElementById('confirm-yes-button');
@@ -29,21 +28,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const button4 = document.getElementById('button-4');
     const numberButtons = [button1, button2, button3, button4]; // Array for easy iteration
 
-    let startX, startY; // Variables for swipe/drag detection
-    let isDragging = false; // Flag to track if mouse is being dragged
+    // --- Drag and Drop Variables ---
+    const dragBoard = document.getElementById('drag-board');
+    const dragStartButton = document.getElementById('drag-start-button');
+    const dragTargets = {
+        'drag-target-up': document.getElementById('drag-target-up'),
+        'drag-target-left': document.getElementById('drag-target-left'),
+        'drag-target-right': document.getElementById('drag-target-right'),
+        'drag-target-down': document.getElementById('drag-target-down')
+    };
+    let isDraggingElement = false;
+    let dragOffsetX, dragOffsetY; // Offset for where the drag started on the button
+    let currentTarget = null; // Stores the ID of the target currently being hovered over
 
     // --- Game State Variables for Simon Says Mechanic ---
     const masterSequence = [
         'hold-button-1', // Single button hold (2 seconds)
-        'up-swipe',
-        'button-2', // Single press
-        'left-swipe',
-        'speak', // Say "alien"
-        'hold-two-buttons-1-3', // New: Hold button-1 and button-3 simultaneously (no duration)
-        'down-swipe',
-        'button-4', // Single press
-        'right-swipe',
-        'button-1' // Single press
+        'drag-up',       // Changed from 'up-swipe' to 'drag-up'
+        'button-2',      // Single press
+        'drag-left',     // Changed from 'left-swipe' to 'drag-left'
+        'speak',         // Say "alien"
+        'hold-two-buttons-1-3', // Hold button-1 and button-3 simultaneously (no duration)
+        'drag-down',     // Changed from 'down-swipe' to 'drag-down'
+        'button-4',      // Single press
+        'drag-right',    // Changed from 'right-swipe' to 'drag-right'
+        'button-1'       // Single press
     ];
     let currentRoundIndex = 0; // Tracks how many items the player needs to repeat in the current round (0-indexed)
     let playerInputIndex = 0;  // Tracks the player's current input position within the round (0-indexed)
@@ -61,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Multi-Button Hold Variables (for specific two-button hold) ---
     const activeHeldButtons = new Set(); // Stores IDs of buttons currently pressed down
     let twoButtonsHeldCorrectlyThisAttempt = false; // Flag for multi-button correctness
-    let multiHoldEvaluatedThisRound = false; // New flag to prevent multiple checkInput calls for multi-hold
+    let multiHoldEvaluatedThisRound = false; // Flag to prevent multiple checkInput calls for multi-hold
 
     // --- Countdown Timer Variables ---
     const countdownDisplay = document.getElementById('countdown-display');
@@ -131,6 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentRoundIndex = 0;
         playerInputIndex = 0;
         multiHoldEvaluatedThisRound = false; // Reset multi-hold flag for new game
+        resetDragButtonPosition(); // Reset drag button position
         updateGameDisplay(); // Call to show the first step
         console.log(`New Game Started. Current target: ${masterSequence[currentRoundIndex]}`);
     }
@@ -209,6 +219,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // Check for 'drag-direction' inputs
+        if (expectedInput.startsWith('drag-')) {
+            if (playerInput === expectedInput) { // Direct match for drag input
+                playerInput = expectedInput; // Normalize for success
+            } else {
+                gameMessage.textContent = `Incorrect drag! Expected to drag ${expectedInput.replace('drag-', '')}.`;
+                playerInput = 'incorrect-drag-attempt'; // Force an incorrect input
+            }
+        }
+
 
         if (playerInput === masterSequence[playerInputIndex]) {
             console.log(`Input MATCHES expected. Proceeding...`);
@@ -222,6 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     currentRoundIndex++;
                     playerInputIndex = 0; // Reset player input for the new round
                     multiHoldEvaluatedThisRound = false; // Reset for next round
+                    resetDragButtonPosition(); // Reset drag button position after round completion
 
                     if (currentRoundIndex === masterSequence.length) {
                         gameMessage.textContent = 'Congratulations! You solved the entire sequence!';
@@ -243,6 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log(`Input DOES NOT MATCH expected. Resetting sequence.`);
             showFeedback(false);
             stopCountdown(); // Stop countdown on incorrect input
+            resetDragButtonPosition(); // Reset drag button position on incorrect input
 
             setTimeout(() => {
                 gameMessage.textContent = `Incorrect! Sequence reset. Repeat the sequence of ${currentRoundIndex + 1} item(s).`;
@@ -274,6 +296,127 @@ document.addEventListener('DOMContentLoaded', () => {
         clearInterval(countdownInterval);
         countdownDisplay.classList.add('hidden');
         countdownTimerSpan.textContent = '';
+    }
+
+    // --- Drag and Drop Functions ---
+    function resetDragButtonPosition() {
+        dragStartButton.style.left = '50%';
+        dragStartButton.style.top = '50%';
+        dragStartButton.style.transform = 'translate(-50%, -50%)';
+        dragStartButton.classList.remove('opacity-50'); // Ensure full opacity
+        removeTargetHighlights();
+    }
+
+    function getElementRect(el) {
+        const rect = el.getBoundingClientRect();
+        return {
+            left: rect.left + window.scrollX,
+            top: rect.top + window.scrollY,
+            right: rect.right + window.scrollX,
+            bottom: rect.bottom + window.scrollY,
+            width: rect.width,
+            height: rect.height
+        };
+    }
+
+    function isOverlapping(rect1, rect2) {
+        return !(rect1.right < rect2.left ||
+                 rect1.left > rect2.right ||
+                 rect1.bottom < rect2.top ||
+                 rect1.top > rect2.bottom);
+    }
+
+    function startDrag(e) {
+        if (masterSequence[playerInputIndex].startsWith('drag-')) {
+            isDraggingElement = true;
+            dragStartButton.classList.add('opacity-50', 'transition-none'); // Add visual feedback for dragging
+            dragStartButton.style.cursor = 'grabbing';
+
+            // Calculate offset relative to the element's top-left corner
+            const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+            const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+            const rect = dragStartButton.getBoundingClientRect();
+            dragOffsetX = clientX - rect.left;
+            dragOffsetY = clientY - rect.top;
+
+            // Set initial position to prevent jump
+            dragStartButton.style.position = 'absolute';
+            dragStartButton.style.left = (clientX - dragOffsetX) + 'px';
+            dragStartButton.style.top = (clientY - dragOffsetY) + 'px';
+            dragStartButton.style.transform = 'none'; // Remove initial transform for precise positioning
+
+            // Add global listeners for dragging
+            document.addEventListener('mousemove', doDrag);
+            document.addEventListener('mouseup', endDrag);
+            document.addEventListener('touchmove', doDrag, { passive: false });
+            document.addEventListener('touchend', endDrag);
+        } else {
+            // If not a drag step, prevent dragging
+            e.preventDefault();
+        }
+    }
+
+    function doDrag(e) {
+        if (!isDraggingElement) return;
+        e.preventDefault(); // Prevent scrolling on touch devices during drag
+
+        const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+        const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+
+        // Position the draggable button
+        dragStartButton.style.left = (clientX - dragOffsetX) + 'px';
+        dragStartButton.style.top = (clientY - dragOffsetY) + 'px';
+
+        const draggableRect = getElementRect(dragStartButton);
+        let hoveredTarget = null;
+
+        removeTargetHighlights(); // Clear previous highlights
+
+        for (const targetId in dragTargets) {
+            const targetElement = dragTargets[targetId];
+            const targetRect = getElementRect(targetElement);
+
+            if (isOverlapping(draggableRect, targetRect)) {
+                targetElement.classList.add('bg-blue-500', 'text-white'); // Highlight
+                hoveredTarget = targetId;
+                break; // Only highlight one target at a time
+            }
+        }
+        currentTarget = hoveredTarget; // Update current target
+    }
+
+    function endDrag(e) {
+        if (!isDraggingElement) return;
+        isDraggingElement = false;
+        dragStartButton.classList.remove('opacity-50', 'transition-none');
+        dragStartButton.style.cursor = 'grab';
+
+        // Remove global listeners
+        document.removeEventListener('mousemove', doDrag);
+        document.removeEventListener('mouseup', endDrag);
+        document.removeEventListener('touchmove', doDrag);
+        document.removeEventListener('touchend', endDrag);
+
+        removeTargetHighlights(); // Clear highlights
+
+        // Determine the result of the drag
+        if (currentTarget) {
+            // Extract direction from target ID (e.g., 'drag-target-up' -> 'drag-up')
+            const dragResult = 'drag-' + currentTarget.replace('drag-target-', '');
+            checkInput(dragResult);
+        } else {
+            // Drag ended without being over any target
+            checkInput('drag-no-target'); // Indicate an invalid drag
+        }
+
+        resetDragButtonPosition(); // Reset button to center after drag
+        currentTarget = null; // Reset current target
+    }
+
+    function removeTargetHighlights() {
+        for (const targetId in dragTargets) {
+            dragTargets[targetId].classList.remove('bg-blue-500', 'text-white');
+        }
     }
 
 
@@ -418,110 +561,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    // --- Swipe Area Logic (Updated for both touch and mouse) ---
-    swipeArea.addEventListener('touchstart', (e) => {
-        e.preventDefault(); // Prevent scrolling on touch
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-        swipeArea.textContent = 'Swiping...';
-    }, { passive: false });
-
-    swipeArea.addEventListener('touchend', (e) => {
-        if (startX === null || startY === null) return;
-
-        const endX = e.changedTouches[0].clientX;
-        const endY = e.changedTouches[0].clientY;
-
-        const diffX = endX - startX;
-        const diffY = endY - startY;
-
-        const sensitivity = 30;
-
-        let swipeDirection = 'No swipe detected';
-
-        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > sensitivity) {
-            swipeDirection = diffX > 0 ? 'right-swipe' : 'left-swipe';
-        } else if (Math.abs(diffY) > Math.abs(diffX) && Math.abs(diffY) > sensitivity) {
-            swipeDirection = diffY > 0 ? 'down-swipe' : 'up-swipe';
-        }
-
-        swipeArea.textContent = swipeDirection;
-        console.log(swipeDirection);
-        checkInput(swipeDirection);
-
-        startX = null;
-        startY = null;
-    });
-
-    // Mouse events for swipe area
-    swipeArea.addEventListener('mousedown', (e) => {
-        e.preventDefault(); // Prevent default browser drag behavior
-        isDragging = true;
-        startX = e.clientX;
-        startY = e.clientY;
-        swipeArea.textContent = 'Dragging...';
-    });
-
-    // Listen for mouseup on the document to ensure swipe ends even if mouse leaves swipeArea
-    document.addEventListener('mouseup', (e) => {
-        if (!isDragging) return;
-        isDragging = false;
-
-        const endX = e.clientX;
-        const endY = e.clientY;
-
-        const diffX = endX - startX;
-        const diffY = endY - startY;
-
-        const sensitivity = 30;
-
-        let swipeDirection = 'No swipe detected';
-
-        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > sensitivity) {
-            swipeDirection = diffX > 0 ? 'right-swipe' : 'left-swipe';
-        } else if (Math.abs(diffY) > Math.abs(diffX) && Math.abs(diffY) > sensitivity) {
-            swipeDirection = diffY > 0 ? 'down-swipe' : 'up-swipe';
-        }
-
-        swipeArea.textContent = swipeDirection;
-        console.log(swipeDirection);
-        checkInput(swipeDirection);
-
-        startX = null;
-        startY = null;
-    });
-
-    // Optional: mousemove to show dragging, but actual swipe check is on mouseup
-    swipeArea.addEventListener('mousemove', (e) => {
-        if (isDragging) {
-            // Can add visual feedback for dragging here if desired
-            // e.g., change background color slightly
-        }
-    });
-
-
-    // --- Speak Button Logic (Updated for press and hold) ---
-    speakButton.addEventListener('mousedown', startSpeechRecognition); // For desktop
-    speakButton.addEventListener('mouseup', stopSpeechRecognition);   // For desktop
-    speakButton.addEventListener('touchstart', startSpeechRecognition, { passive: false }); // For mobile, added passive: false
-    speakButton.addEventListener('touchend', stopSpeechRecognition);   // For mobile
-
-    function startSpeechRecognition(e) {
-        e.preventDefault(); // Prevent default touch behavior (like text selection/copy)
-        if (recognition) {
-            speakButton.textContent = 'Recording...';
-            speakButton.classList.add('bg-red-500'); // Visual feedback for recording
-            recognition.start();
-            console.log('Microphone activated. Listening...');
-        } else {
-            gameMessage.textContent = 'Speech recognition not available.';
-        }
-    }
-
-    function stopSpeechRecognition() {
-        if (recognition) {
-            recognition.stop();
-            console.log('Microphone deactivated.');
-        }
-    }
+    // --- Drag Start Button Event Listeners ---
+    dragStartButton.addEventListener('mousedown', startDrag);
+    dragStartButton.addEventListener('touchstart', startDrag, { passive: false });
 });

@@ -56,7 +56,7 @@
             <p id="game-message" class="text-xl text-gray-700 mb-4">Start by entering the first item in the sequence!</p>
             <p id="sequence-display" class="text-2xl font-bold text-blue-700 mb-6"></p>
 
-            <!-- Countdown Timer Display - Added fixed positioning and z-index -->
+            <!-- Countdown Timer Display -->
             <p id="countdown-display" class="text-3xl font-bold text-red-600 mb-4 hidden fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">Hold: <span id="countdown-timer"></span>s</p>
 
             <div class="flex justify-center space-x-4 mb-8">
@@ -67,8 +67,25 @@
                 <button id="button-4" class="game-button bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-5 px-8 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 text-2xl">4</button>
             </div>
 
-            <div id="swipe-area" class="w-64 h-64 bg-gray-200 rounded-xl flex items-center justify-center text-gray-600 text-xl font-semibold select-none cursor-grab active:cursor-grabbing mb-8">
-                Swipe Here
+            <!-- Drag and Drop Area (Replaces Swipe Area) -->
+            <div id="drag-board" class="relative w-64 h-64 bg-gray-200 rounded-xl mx-auto mb-8 grid grid-cols-3 grid-rows-3 gap-2 p-2">
+                <div class="col-start-2 row-start-1 flex items-center justify-center">
+                    <div id="drag-target-up" class="w-16 h-16 bg-gray-300 rounded-lg flex items-center justify-center text-sm font-semibold text-gray-700 transition-all duration-100">Up</div>
+                </div>
+                <div class="col-start-1 row-start-2 flex items-center justify-center">
+                    <div id="drag-target-left" class="w-16 h-16 bg-gray-300 rounded-lg flex items-center justify-center text-sm font-semibold text-gray-700 transition-all duration-100">Left</div>
+                </div>
+                <div class="col-start-3 row-start-2 flex items-center justify-center">
+                    <div id="drag-target-right" class="w-16 h-16 bg-gray-300 rounded-lg flex items-center justify-center text-sm font-semibold text-gray-700 transition-all duration-100">Right</div>
+                </div>
+                <div class="col-start-2 row-start-3 flex items-center justify-center">
+                    <div id="drag-target-down" class="w-16 h-16 bg-gray-300 rounded-lg flex items-center justify-center text-sm font-semibold text-gray-700 transition-all duration-100">Down</div>
+                </div>
+
+                <!-- Draggable "Drag Start" button -->
+                <button id="drag-start-button" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-full shadow-lg flex items-center justify-center cursor-grab active:cursor-grabbing transition-all duration-100">
+                    Drag Start
+                </button>
             </div>
 
             <button id="speak-button" class="game-button bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
@@ -91,12 +108,12 @@
             </div>
         </div>
 
-        <!-- Feedback Overlay - Added fixed positioning and z-index -->
+        <!-- Feedback Overlay -->
         <div id="feedback-overlay" class="fixed inset-0 flex items-center justify-center z-40 hidden">
             <!-- Content for feedback (e.g., checkmark or X) can go here if needed -->
         </div>
 
-        <!-- Win Screen (New Element - initially hidden) -->
+        <!-- Win Screen -->
         <div id="win-screen" class="screen hidden fixed inset-0 bg-green-800 bg-opacity-90 text-white flex items-center justify-center z-50">
             <h2 class="text-5xl font-extrabold animate-pulse">YOU WIN!</h2>
         </div>
