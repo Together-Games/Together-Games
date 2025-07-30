@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const solutionDisplayScreen = document.getElementById('solution-display-screen');
     const confirmationModal = document.getElementById('confirmation-modal');
     const feedbackOverlay = document.getElementById('feedback-overlay');
-    const winScreen = document.getElementById('win-screen'); // New win screen
+    const winScreen = document.getElementById('win-screen');
 
     const alienButton = document.getElementById('alien-button');
     const solutionNumberInput = document.getElementById('solution-number-input');
@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const displayedSolutionNumber = document.getElementById('displayed-solution-number');
     const gameMessage = document.getElementById('game-message');
-    const sequenceDisplay = document.getElementById('sequence-display'); // New element to display sequence
+    const sequenceDisplay = document.getElementById('sequence-display');
     const solutionBackButton = document.getElementById('solution-back-button');
     const swipeArea = document.getElementById('swipe-area');
     const speakButton = document.getElementById('speak-button');
@@ -31,13 +31,63 @@ document.addEventListener('DOMContentLoaded', () => {
     let startX, startY; // Variables for swipe detection
 
     // --- Game State Variables for Simon Says Mechanic ---
-    // New 10-step master sequence
     const masterSequence = [
         'button-1', 'up-swipe', 'button-2', 'left-swipe', 'speak',
         'button-3', 'down-swipe', 'button-4', 'right-swipe', 'button-1'
     ];
     let currentRoundIndex = 0;
     let playerInputIndex = 0;
+
+    // --- Web Speech API Variables ---
+    // Check for browser compatibility for SpeechRecognition
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null; // Will be initialized if API is supported
+
+    if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.continuous = false; // Stop after a single utterance
+        recognition.interimResults = false; // Only return final results
+        recognition.lang = 'en-US'; // Set language for recognition
+
+        // Event handler for when speech is recognized
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript.toLowerCase().trim(); // Get recognized text
+            console.log('Speech recognized:', transcript);
+            gameMessage.textContent = `You said: "${transcript}"`; // Show what was recognized
+            // Pass the recognized transcript directly to checkInput
+            checkInput(transcript);
+        };
+
+        // Event handler for when speech recognition ends (e.g., no more speech detected)
+        recognition.onend = () => {
+            speakButton.textContent = 'Speak'; // Reset button text
+            speakButton.classList.remove('bg-red-500'); // Remove recording indicator color
+            console.log('Speech recognition ended.');
+        };
+
+        // Event handler for errors
+        recognition.onerror = (event) => {
+            speakButton.textContent = 'Speak'; // Reset button text
+            speakButton.classList.remove('bg-red-500'); // Remove recording indicator color
+            console.error('Speech recognition error:', event.error);
+            gameMessage.textContent = `Speech error: ${event.error}. Try again.`;
+            // If the error is 'not-allowed' (user denied permission), instruct them
+            if (event.error === 'not-allowed') {
+                alert('Microphone access denied. Please allow microphone permissions in your browser settings to use this feature.');
+            }
+            // If speech was expected but nothing was heard, count it as an incorrect input
+            if (masterSequence[playerInputIndex] === 'speak' && event.error === 'no-speech') {
+                checkInput('no-speech-detected'); // Treat as incorrect input if 'speak' was expected
+            }
+        };
+    } else {
+        // Fallback if Web Speech API is not supported
+        speakButton.disabled = true;
+        speakButton.textContent = 'Speech Not Supported';
+        gameMessage.textContent = 'Your browser does not support speech recognition.';
+        console.warn('Web Speech API not supported in this browser.');
+    }
+
 
     // --- Screen Navigation Functions ---
 
@@ -84,6 +134,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function checkInput(playerInput) {
+        let expectedInput = masterSequence[playerInputIndex];
+
+        // Specific handling for 'speak' input type
+        if (expectedInput === 'speak') {
+            // If the expected input is 'speak', we check if playerInput is a valid recognized speech string.
+            // A non-empty string means speech was recognized. 'no-speech-detected' means an error occurred.
+            if (playerInput && playerInput !== 'no-speech-detected') {
+                // For now, any recognized speech counts as correct for 'speak' step.
+                // In a real game, you'd check if `playerInput` matches a specific word/phrase.
+                playerInput = 'speak'; // Normalize to 'speak' to match masterSequence
+            } else {
+                // If no speech was detected or an error occurred during speech recognition, it's incorrect.
+                playerInput = 'incorrect-speak-attempt'; // Force an incorrect input to trigger else block
+            }
+        }
+
         if (playerInput === masterSequence[playerInputIndex]) {
             console.log(`Correct! Input: ${playerInput}, Expected: ${masterSequence[playerInputIndex]}`);
             playerInputIndex++;
@@ -117,7 +183,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 gameMessage.textContent = `Incorrect! Sequence reset. Repeat the sequence of ${currentRoundIndex + 1} item(s).`;
                 playerInputIndex = 0; // Reset player input for the current round
                 console.log('Sequence reset. Player must try again from the start of the current round.');
-                // No need to call updateGameDisplay here as currentRoundIndex hasn't changed
             }, 500); // Match feedback duration
         }
     }
@@ -140,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
         displayedSolutionNumber.textContent = `Solution: ${solutionNumber}`;
         showScreen(solutionDisplayScreen);
         console.log('Starting Alien game with Solution Number:', solutionNumber);
-        initializeGame(); // Initialize game state when starting
+        initializeGame();
     });
 
     backToHomeButton.addEventListener('click', () => {
@@ -207,11 +272,29 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
     }, { passive: false });
 
-    // --- Speak Button Logic ---
-    speakButton.addEventListener('click', () => {
-        console.log('Speak button clicked. Initiating microphone input...');
-        checkInput('speak');
-        // The alert is still here as a placeholder, but the checkInput will handle the game logic.
-        // alert('Microphone feature coming soon! (For now, "Speak" counts as an input)');
-    });
+    // --- Speak Button Logic (Updated for press and hold) ---
+    // Removed the direct 'click' listener to avoid conflicts.
+    speakButton.addEventListener('mousedown', startSpeechRecognition); // For desktop
+    speakButton.addEventListener('mouseup', stopSpeechRecognition);   // For desktop
+    speakButton.addEventListener('touchstart', startSpeechRecognition, { passive: false }); // For mobile, added passive: false
+    speakButton.addEventListener('touchend', stopSpeechRecognition);   // For mobile
+
+    function startSpeechRecognition(e) {
+        e.preventDefault(); // Prevent default touch behavior (like text selection/copy)
+        if (recognition) {
+            speakButton.textContent = 'Recording...';
+            speakButton.classList.add('bg-red-500'); // Visual feedback for recording
+            recognition.start();
+            console.log('Microphone activated. Listening...');
+        } else {
+            gameMessage.textContent = 'Speech recognition not available.';
+        }
+    }
+
+    function stopSpeechRecognition() {
+        if (recognition) {
+            recognition.stop();
+            console.log('Microphone deactivated.');
+        }
+    }
 });
