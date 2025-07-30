@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const button1 = document.getElementById('button-1');
     const button2 = document.getElementById('button-2');
     const button3 = document.getElementById('button-3');
-    const button4 = document.getElementById('button-4');
+    const button4 = document = document.getElementById('button-4');
     const numberButtons = [button1, button2, button3, button4]; // Array for easy iteration
 
     let startX, startY; // Variables for swipe/drag detection
@@ -45,8 +45,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'right-swipe',
         'button-1' // Single press
     ];
-    let currentRoundIndex = 0;
-    let playerInputIndex = 0;
+    let currentRoundIndex = 0; // Tracks how many items the player needs to repeat in the current round (0-indexed)
+    let playerInputIndex = 0;  // Tracks the player's current input position within the round (0-indexed)
 
     // --- Hold Button Variables (for single button holds) ---
     const holdTimers = {}; // Stores setTimeout IDs for each button
@@ -129,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function initializeGame() {
         currentRoundIndex = 0;
         playerInputIndex = 0;
-        updateGameDisplay();
+        updateGameDisplay(); // Call to show the first step
         console.log(`New Game Started. Current target: ${masterSequence[currentRoundIndex]}`);
     }
 
@@ -138,6 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sequenceDisplay.textContent = `Sequence: ${sequenceToShow.join(' -> ')}`;
         gameMessage.textContent = `Repeat the sequence of ${currentRoundIndex + 1} item(s).`;
         console.log(`Current round requires ${currentRoundIndex + 1} items.`);
+        console.log(`Expected input for current step: ${masterSequence[playerInputIndex]}`);
     }
 
     function showFeedback(isCorrect) {
@@ -155,6 +156,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function checkInput(playerInput) {
+        console.log(`--- checkInput called ---`);
+        console.log(`Current Round Index: ${currentRoundIndex}, Player Input Index: ${playerInputIndex}`);
+        console.log(`Player Input: "${playerInput}", Expected Input: "${masterSequence[playerInputIndex]}"`);
+
         let expectedInput = masterSequence[playerInputIndex];
 
         // Specific handling for 'speak' input type
@@ -176,7 +181,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Check for 'hold-button-X' inputs (single button hold)
         if (expectedInput.startsWith('hold-button-')) {
-            if (playerInput === expectedInput + '-correct') {
+            // If the playerInput is not a 'hold-button' result, it's immediately incorrect
+            if (!playerInput.startsWith('hold-button-')) {
+                gameMessage.textContent = `Incorrect! Expected a hold action.`;
+                playerInput = 'incorrect-hold-attempt'; // Force an incorrect input
+            } else if (playerInput === expectedInput + '-correct') {
                 playerInput = expectedInput; // Normalize to match masterSequence for success
             } else {
                 gameMessage.textContent = `Incorrect hold for ${expectedInput.replace('hold-', '')}.`;
@@ -186,7 +195,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Check for 'hold-two-buttons-1-3' input (new multi-button hold)
         if (expectedInput === 'hold-two-buttons-1-3') {
-            if (playerInput === 'multi-hold-2-correct') {
+            // If the playerInput is not a 'multi-hold' result, it's immediately incorrect
+            if (!playerInput.startsWith('multi-hold-')) {
+                 gameMessage.textContent = `Incorrect! Expected a multi-button hold.`;
+                 playerInput = 'incorrect-multi-hold-attempt'; // Force an incorrect input
+            } else if (playerInput === 'multi-hold-2-correct') {
                 playerInput = expectedInput; // Normalize to match masterSequence for success
             } else {
                 gameMessage.textContent = `Incorrect multi-button hold. Must hold button 1 and 3 simultaneously.`;
@@ -196,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
         if (playerInput === masterSequence[playerInputIndex]) {
-            console.log(`Correct! Input: ${playerInput}, Expected: ${masterSequence[playerInputIndex]}`);
+            console.log(`Input MATCHES expected. Proceeding...`);
             playerInputIndex++;
             showFeedback(true);
             stopCountdown(); // Stop countdown on correct input
@@ -205,7 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (playerInputIndex > currentRoundIndex) {
                     console.log(`Round ${currentRoundIndex + 1} completed!`);
                     currentRoundIndex++;
-                    playerInputIndex = 0;
+                    playerInputIndex = 0; // Reset player input for the new round
 
                     if (currentRoundIndex === masterSequence.length) {
                         gameMessage.textContent = 'Congratulations! You solved the entire sequence!';
@@ -215,20 +228,22 @@ document.addEventListener('DOMContentLoaded', () => {
                             showScreen(homepageScreen);
                         }, 3000);
                     } else {
-                        updateGameDisplay();
+                        gameMessage.textContent = `Correct! Now repeat the sequence of ${currentRoundIndex + 1} item(s).`;
+                        updateGameDisplay(); // Update display for the new round
                     }
                 } else {
-                    gameMessage.textContent = `Correct! Enter the next item.`;
+                    gameMessage.textContent = `Correct! Enter the next item: ${masterSequence[playerInputIndex]}.`;
                 }
+                console.log(`After processing: Current Round Index: ${currentRoundIndex}, Player Input Index: ${playerInputIndex}`);
             }, 500);
         } else {
-            console.log(`Incorrect! You entered "${playerInput}", but expected "${masterSequence[playerInputIndex]}".`);
+            console.log(`Input DOES NOT MATCH expected. Resetting sequence.`);
             showFeedback(false);
             stopCountdown(); // Stop countdown on incorrect input
 
             setTimeout(() => {
                 gameMessage.textContent = `Incorrect! Sequence reset. Repeat the sequence of ${currentRoundIndex + 1} item(s).`;
-                playerInputIndex = 0;
+                playerInputIndex = 0; // Reset player input for the current round
                 console.log('Sequence reset. Player must try again from the start of the current round.');
             }, 500);
         }
@@ -383,6 +398,11 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log(`Released ${buttonId}. Held correctly: ${heldCorrectly}. Input: ${inputString}`);
             checkInput(inputString);
             stopCountdown(); // Stop countdown on single hold release
+        } else {
+            // For regular button presses that are NOT part of a hold sequence
+            // This ensures button presses are checked if they are the expected input
+            // and not part of a hold event that's already handled.
+            checkInput(buttonId);
         }
     }
 
