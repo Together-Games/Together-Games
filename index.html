@@ -31,15 +31,70 @@
             </div>
         </div>
 
-        <!-- Alien Game Screen (initially hidden) -->
+        <!-- Alien Game Screen (Enter Solution Number) -->
         <div id="alien-game-screen" class="screen hidden">
             <h2 class="text-3xl font-bold text-gray-800 mb-6">Enter Solution Number</h2>
 
             <input type="number" id="solution-number-input" placeholder="e.g., 12345" class="w-full p-3 border border-gray-300 rounded-lg text-lg text-center mb-6 focus:outline-none focus:ring-2 focus:ring-purple-500">
 
-            <button id="start-game-button" class="game-button bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+            <button id="start-game-button" class="game-button bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 mb-4">
                 Start
             </button>
+            <button id="back-to-home-button" class="game-button bg-gray-400 hover:bg-gray-500 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                Back to Homepage
+            </button>
+        </div>
+
+        <!-- Solution Display Screen (New Screen - initially hidden) -->
+        <div id="solution-display-screen" class="screen hidden relative">
+            <!-- Back button at top-left -->
+            <button id="solution-back-button" class="absolute top-4 left-4 bg-gray-400 hover:bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                Back
+            </button>
+
+            <h2 id="displayed-solution-number" class="text-3xl font-bold text-gray-800 mb-6 mt-12">Solution: [Number]</h2>
+            <p id="game-message" class="text-xl text-gray-700 mb-4">Start by entering the first item in the sequence!</p>
+            <p id="sequence-display" class="text-2xl font-bold text-blue-700 mb-6"></p>
+
+            <div class="flex justify-center space-x-4 mb-8">
+                <button id="button-1" class="game-button bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">1</button>
+                <button id="button-2" class="game-button bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">2</button>
+                <button id="button-3" class="game-button bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">3</button>
+                <button id="button-4" class="game-button bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">4</button>
+            </div>
+
+            <div id="swipe-area" class="w-64 h-64 bg-gray-200 rounded-xl flex items-center justify-center text-gray-600 text-xl font-semibold select-none cursor-grab active:cursor-grabbing mb-8">
+                Swipe Here
+            </div>
+
+            <button id="speak-button" class="game-button bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                Speak
+            </button>
+        </div>
+
+        <!-- Confirmation Modal (initially hidden) -->
+        <div id="confirmation-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white p-8 rounded-xl shadow-lg text-center max-w-sm w-full">
+                <p class="text-xl font-semibold text-gray-800 mb-6">Are you sure you want to end the game?</p>
+                <div class="flex justify-center space-x-4">
+                    <button id="confirm-yes-button" class="game-button bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                        Yes, End Game
+                    </button>
+                    <button id="confirm-no-button" class="game-button bg-gray-400 hover:bg-gray-500 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                        No, Keep Playing
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feedback Overlay (New Element - initially hidden) -->
+        <div id="feedback-overlay" class="fixed inset-0 flex items-center justify-center z-40 hidden">
+            <!-- Content for feedback (e.g., checkmark or X) can go here if needed -->
+        </div>
+
+        <!-- Win Screen (New Element - initially hidden) -->
+        <div id="win-screen" class="screen hidden fixed inset-0 bg-green-800 bg-opacity-90 text-white flex items-center justify-center z-50">
+            <h2 class="text-5xl font-extrabold animate-pulse">YOU WIN!</h2>
         </div>
     </div>
 
