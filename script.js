@@ -115,7 +115,7 @@ function resetGameState() {
     currentRound = 1;
     maxRounds = 1;
     holdTimer = 0;
-    canDrag = false; // Dragging is initially false, but button is always movable.
+    canDrag = false;
     clearInterval(countdownInterval);
 
     // Reset drag button position
@@ -144,7 +144,7 @@ function startRound() {
     isSequencePhase = true;
     isDragPhase = false;
     isHoldPhase = false;
-    canDrag = false; // Ensure canDrag is false during number input phase
+    canDrag = false; // Drag is not enabled during number input phase
 
     updateGameDisplay();
     speak(`Round ${currentRound}. Please enter the ${currentRound} item sequence.`);
@@ -236,8 +236,7 @@ function resetDragButtonPosition() {
 
 // Starts the drag operation
 function startDrag(e) {
-    // REMOVED THE if (!canDrag) return; CHECK HERE
-    // The dragStartButton can now always be moved, regardless of game phase.
+    if (!canDrag) return; // Dragging is only allowed when canDrag is true
 
     isDragging = true;
     dragStartButton.style.transition = 'none'; // Disable transition during drag
@@ -370,7 +369,6 @@ function onMouseUp(e) {
             showFeedback(false); // Incorrect, dropped in empty space
             playSound('incorrect');
             gameMessage.textContent = 'Incorrect! Dropped in empty space.';
-            // Do not end game immediately for just dropping outside, let them retry or mark as mistake
         }
     }
 }
@@ -405,14 +403,6 @@ function handleDrop(targetId) {
             playSound('incorrect');
             endGame(false); // Incorrect drag, player loses
         }
-    } else {
-        // Player dragged and dropped, but it wasn't the correct phase.
-        // The icon moves, but no game logic consequence (as per user's request for "make a mistake")
-        // Optionally, give a subtle feedback that it's not the right time, but don't end game.
-        // For now, it just resets position visually.
-        resetDragButtonPosition();
-        gameMessage.textContent = 'Not the right time for that yet!';
-        speak('Not yet!');
     }
     resetDragButtonPosition(); // Always reset position after a drop
 }
