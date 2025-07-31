@@ -11,9 +11,9 @@
     <!-- Use Inter font for a clean look -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="font-inter bg-gray-100 flex items-center justify-center min-h-screen p-4">
+<body class="font-inter bg-gray-100 flex items-center justify-center min-h-screen p-4 overflow-hidden">
 
-    <div id="app-container" class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md text-center">
+    <div id="app-container" class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md text-center h-full flex flex-col">
         <!-- Homepage Screen -->
         <div id="homepage-screen" class="screen">
             <h1 class="text-4xl font-bold text-gray-800 mb-8">Together Games</h1>
@@ -46,20 +46,20 @@
         </div>
 
         <!-- Solution Display Screen (New Screen - initially hidden) -->
-        <div id="solution-display-screen" class="screen hidden relative">
+        <div id="solution-display-screen" class="screen hidden relative flex flex-col flex-grow p-4 justify-between">
             <!-- Back button at top-left -->
             <button id="solution-back-button" class="absolute top-4 left-4 bg-gray-400 hover:bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
                 Back
             </button>
 
-            <h2 id="displayed-solution-number" class="text-3xl font-bold text-gray-800 mb-6 mt-12">Solution: [Number]</h2>
-            <p id="game-message" class="text-xl text-gray-700 mb-4"></p>
-            <p id="sequence-display" class="text-2xl font-bold text-blue-700 mb-6"></p>
+            <h2 id="displayed-solution-number" class="text-3xl font-bold text-gray-800 mb-4 mt-12">Solution: [Number]</h2>
+            <p id="game-message" class="text-xl text-gray-700 mb-2"></p>
+            <p id="sequence-display" class="text-2xl font-bold text-blue-700 mb-4"></p>
 
             <!-- Countdown Timer Display -->
             <p id="countdown-display" class="text-3xl font-bold text-red-600 mb-4 hidden fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">Hold: <span id="countdown-timer"></span>s</p>
 
-            <div class="flex justify-center space-x-4 mb-8">
+            <div class="flex justify-center space-x-4 mb-4">
                 <!-- Increased padding (py-5 px-8) and font size (text-2xl) -->
                 <button id="button-1" class="game-button bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-5 px-8 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 text-2xl">1</button>
                 <button id="button-2" class="game-button bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-5 px-8 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 text-2xl">2</button>
@@ -68,7 +68,7 @@
             </div>
 
             <!-- Drag and Drop Area (Replaces Swipe Area) -->
-            <div id="drag-board" class="relative w-64 h-64 bg-gray-200 rounded-xl mx-auto mb-8 grid grid-cols-3 grid-rows-3 gap-2 p-2">
+            <div id="drag-board" class="relative w-full max-w-xs aspect-square bg-gray-200 rounded-xl mx-auto mb-2 grid grid-cols-3 grid-rows-3 gap-2 p-2">
                 <div class="col-start-2 row-start-1 flex items-center justify-center">
                     <div id="drag-target-up" class="w-20 h-20 bg-gray-300 rounded-lg flex items-center justify-center text-sm font-semibold text-gray-700 transition-all duration-100">Up</div>
                 </div>
