@@ -1,590 +1,522 @@
-document.addEventListener('DOMContentLoaded', () => {
-    // Get references to the HTML elements
-    const homepageScreen = document.getElementById('homepage-screen');
-    const alienGameScreen = document.getElementById('alien-game-screen');
-    const solutionDisplayScreen = document.getElementById('solution-display-screen');
-    const confirmationModal = document.getElementById('confirmation-modal');
-    const feedbackOverlay = document.getElementById('feedback-overlay');
-    const winScreen = document.getElementById('win-screen');
+// --- Game State Variables ---
+let currentSolution = []; // Stores the numerical solution sequence
+let solutionIndex = 0;    // Tracks current position in the sequence
+let currentSequence = []; // Stores the player's entered sequence for the number buttons
+let currentDragSequence = []; // Stores the player's drag sequence
+let isSequencePhase = false; // True when entering the number sequence
+let isDragPhase = false;     // True when performing drag & drop
+let isHoldPhase = false;     // True during the hold countdown
+let currentRound = 1;        // Tracks the current round (length of sequence to repeat)
+let maxRounds = 1;           // Max rounds based on solution length
+let holdTimer = 0;           // Countdown timer value
+let countdownInterval;       // Stores the interval ID for countdown
+let canDrag = false;         // Controls whether dragStartButton can be dragged
+let isDragging = false;      // Flag to track active drag
+let dragStartX, dragStartY;  // Store initial mouse/touch position
+let initialX, initialY;      // Store initial element position
+let activeTarget = null;     // Tracks the currently hovered drag target
 
-    const alienButton = document.getElementById('alien-button');
-    const solutionNumberInput = document.getElementById('solution-number-input');
-    const startGameButton = document.getElementById('start-game-button');
-    const backToHomeButton = document.getElementById('back-to-home-button');
 
-    const displayedSolutionNumber = document.getElementById('displayed-solution-number');
-    const gameMessage = document.getElementById('game-message');
-    const sequenceDisplay = document.getElementById('sequence-display');
-    const solutionBackButton = document.getElementById('solution-back-button');
-    const speakButton = document.getElementById('speak-button');
+// --- DOM Element References ---
+const homepageScreen = document.getElementById('homepage-screen');
+const alienButton = document.getElementById('alien-button');
+const alienGameScreen = document.getElementById('alien-game-screen');
+const solutionNumberInput = document.getElementById('solution-number-input');
+const startGameButton = document.getElementById('start-game-button');
+const backToHomeButton = document.getElementById('back-to-home-button');
+const solutionDisplayScreen = document.getElementById('solution-display-screen');
+const displayedSolutionNumber = document.getElementById('displayed-solution-number');
+const gameMessage = document.getElementById('game-message');
+const sequenceDisplay = document.getElementById('sequence-display');
+const button1 = document.getElementById('button-1');
+const button2 = document.getElementById('button-2');
+const button3 = document.getElementById('button-3');
+const button4 = document.getElementById('button-4');
+const speakButton = document.getElementById('speak-button');
+const solutionBackButton = document.getElementById('solution-back-button');
+const confirmationModal = document.getElementById('confirmation-modal');
+const confirmYesButton = document.getElementById('confirm-yes-button');
+const confirmNoButton = document.getElementById('confirm-no-button');
+const feedbackOverlay = document.getElementById('feedback-overlay');
+const winScreen = document.getElementById('win-screen');
 
-    const confirmYesButton = document.getElementById('confirm-yes-button');
-    const confirmNoButton = document.getElementById('confirm-no-button');
+// Drag & Drop elements
+const dragBoard = document.getElementById('drag-board');
+const dragStartButton = document.getElementById('drag-start-button');
+const dragTargetUp = document.getElementById('drag-target-up');
+const dragTargetLeft = document.getElementById('drag-target-left');
+const dragTargetRight = document.getElementById('drag-target-right');
+const dragTargetDown = document.getElementById('drag-target-down');
 
-    // References to the numbered buttons
-    const button1 = document.getElementById('button-1');
-    const button2 = document.getElementById('button-2');
-    const button3 = document.getElementById('button-3');
-    const button4 = document.getElementById('button-4');
-    const numberButtons = [button1, button2, button3, button4]; // Array for easy iteration
+// Countdown timer elements
+const countdownDisplay = document.getElementById('countdown-display');
+const countdownTimer = document.getElementById('countdown-timer');
 
-    // --- Drag and Drop Variables ---
-    const dragBoard = document.getElementById('drag-board');
-    const dragStartButton = document.getElementById('drag-start-button');
-    const dragTargets = {
-        'drag-target-up': document.getElementById('drag-target-up'),
-        'drag-target-left': document.getElementById('drag-target-left'),
-        'drag-target-right': document.getElementById('drag-target-right'),
-        'drag-target-down': document.getElementById('drag-target-down')
-    };
-    let isDraggingElement = false;
-    let dragOffsetX, dragOffsetY; // Offset for where the drag started on the button
-    let currentTarget = null; // Stores the ID of the target currently being hovered over
 
-    // --- Game State Variables for Simon Says Mechanic ---
-    const masterSequence = [
-        'hold-button-1', // Single button hold (2 seconds)
-        'drag-up',       // Changed from 'up-swipe' to 'drag-up'
-        'button-2',      // Single press
-        'drag-left',     // Changed from 'left-swipe' to 'drag-left'
-        'speak',         // Say "alien"
-        'hold-two-buttons-1-3', // Hold button-1 and button-3 simultaneously (no duration)
-        'drag-down',     // Changed from 'down-swipe' to 'drag-down'
-        'button-4',      // Single press
-        'drag-right',    // Changed from 'right-swipe' to 'drag-right'
-        'button-1'       // Single press
-    ];
-    let currentRoundIndex = 0; // Tracks how many items the player needs to repeat in the current round (0-indexed)
-    let playerInputIndex = 0;  // Tracks the player's current input position within the round (0-indexed)
+// --- Utility Functions ---
+function showScreen(screenId) {
+    const screens = document.querySelectorAll('.screen');
+    screens.forEach(screen => screen.classList.add('hidden'));
+    document.getElementById(screenId).classList.remove('hidden');
+}
 
-    // --- Hold Button Variables (for single button holds) ---
-    const holdTimers = {}; // Stores setTimeout IDs for each button
-    const buttonHoldState = { // Tracks the state of each button's hold
-        'button-1': { isHolding: false, isHeldForDuration: false },
-        'button-2': { isHolding: false, isHeldForDuration: false },
-        'button-3': { isHolding: false, isHeldForDuration: false },
-        'button-4': { isHolding: false, isHeldForDuration: false }
-    };
-    const HOLD_DURATION = 2000; // Changed to 2 seconds (2000 milliseconds)
-
-    // --- Multi-Button Hold Variables (for specific two-button hold) ---
-    const activeHeldButtons = new Set(); // Stores IDs of buttons currently pressed down
-    let twoButtonsHeldCorrectlyThisAttempt = false; // Flag for multi-button correctness
-    let multiHoldEvaluatedThisRound = false; // Flag to prevent multiple checkInput calls for multi-hold
-
-    // --- Countdown Timer Variables ---
-    const countdownDisplay = document.getElementById('countdown-display');
-    const countdownTimerSpan = document.getElementById('countdown-timer');
-    let countdownInterval = null; // Stores the setInterval ID for the countdown
-
-    // --- Web Speech API Variables ---
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    let recognition = null;
-
-    if (SpeechRecognition) {
-        recognition = new SpeechRecognition();
-        recognition.continuous = false;
-        recognition.interimResults = false;
-        recognition.lang = 'en-US';
-
-        recognition.onresult = (event) => {
-            const transcript = event.results[0][0].transcript.toLowerCase().trim();
-            console.log('Speech recognized:', transcript);
-            gameMessage.textContent = `You said: "${transcript}"`;
-            checkInput(transcript);
-        };
-
-        recognition.onend = () => {
-            speakButton.textContent = 'Speak';
-            speakButton.classList.remove('bg-red-500');
-            console.log('Speech recognition ended.');
-        };
-
-        recognition.onerror = (event) => {
-            speakButton.textContent = 'Speak';
-            speakButton.classList.remove('bg-red-500');
-            console.error('Speech recognition error:', event.error);
-            gameMessage.textContent = `Speech error: ${event.error}. Try again.`;
-            if (event.error === 'not-allowed') {
-                alert('Microphone access denied. Please allow microphone permissions in your browser settings to use this feature.');
-            }
-            if (masterSequence[playerInputIndex] === 'speak' && event.error === 'no-speech') {
-                checkInput('no-speech-detected');
-            }
-        };
+function showFeedback(isCorrect) {
+    feedbackOverlay.classList.remove('hidden');
+    if (isCorrect) {
+        feedbackOverlay.style.backgroundColor = 'rgba(0, 255, 0, 0.3)'; // Green for correct
     } else {
-        speakButton.disabled = true;
-        speakButton.textContent = 'Speech Not Supported';
-        gameMessage.textContent = 'Your browser does not support speech recognition.';
-        console.warn('Web Speech API not supported in this browser.');
+        feedbackOverlay.style.backgroundColor = 'rgba(255, 0, 0, 0.3)'; // Red for incorrect
     }
-
-
-    // --- Screen Navigation Functions ---
-
-    function showScreen(screenToShow) {
-        homepageScreen.classList.add('hidden');
-        alienGameScreen.classList.add('hidden');
-        solutionDisplayScreen.classList.add('hidden');
-        confirmationModal.classList.add('hidden');
+    setTimeout(() => {
         feedbackOverlay.classList.add('hidden');
-        winScreen.classList.add('hidden');
-        countdownDisplay.classList.add('hidden'); // Hide countdown when changing screens
-        clearInterval(countdownInterval); // Clear any active countdown
-        screenToShow.classList.remove('hidden');
+        feedbackOverlay.style.backgroundColor = ''; // Reset
+    }, 500); // Display for 0.5 seconds
+}
+
+function speak(text) {
+    if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        // Optional: Set voice, pitch, rate
+        // utterance.voice = speechSynthesis.getVoices().find(voice => voice.name === 'Google US English');
+        // utterance.pitch = 1.0;
+        // utterance.rate = 1.0;
+        speechSynthesis.speak(utterance);
+    } else {
+        console.warn("Speech synthesis not supported in this browser.");
+    }
+}
+
+function playSound(type) {
+    let audio;
+    if (type === 'correct') {
+        audio = new Audio('sounds/correct.mp3'); // You'll need to provide these sound files
+    } else if (type === 'incorrect') {
+        audio = new Audio('sounds/incorrect.mp3');
+    } else if (type === 'win') {
+        audio = new Audio('sounds/win.mp3');
+    }
+    if (audio) {
+        audio.play().catch(e => console.error("Error playing sound:", e));
+    }
+}
+
+
+// --- Game Logic ---
+
+// Resets game state, called on start or reset
+function resetGameState() {
+    currentSolution = [];
+    solutionIndex = 0;
+    currentSequence = [];
+    currentDragSequence = [];
+    isSequencePhase = false;
+    isDragPhase = false;
+    isHoldPhase = false;
+    currentRound = 1;
+    maxRounds = 1;
+    holdTimer = 0;
+    canDrag = false; // Dragging is initially false, but button is always movable.
+    clearInterval(countdownInterval);
+
+    // Reset drag button position
+    dragStartButton.style.left = '50%';
+    dragStartButton.style.top = '50%';
+    dragStartButton.style.transform = 'translate(-50%, -50%)';
+    dragStartButton.style.transition = 'none'; // Clear transition on reset
+}
+
+// Generates the solution sequence based on input number
+function generateSolution(number) {
+    currentSolution = Array.from(String(number), Number);
+    maxRounds = currentSolution.length; // Max rounds is the length of the solution
+}
+
+// Starts the next round of the game
+function startRound() {
+    if (currentRound > maxRounds) {
+        endGame(true); // Player wins!
+        return;
     }
 
-    // --- Game Logic Functions ---
+    currentSequence = [];
+    currentDragSequence = [];
+    solutionIndex = 0; // Reset index for the new round's sequence
+    isSequencePhase = true;
+    isDragPhase = false;
+    isHoldPhase = false;
+    canDrag = false; // Ensure canDrag is false during number input phase
 
-    function initializeGame() {
-        currentRoundIndex = 0;
-        playerInputIndex = 0;
-        multiHoldEvaluatedThisRound = false; // Reset multi-hold flag for new game
-        resetDragButtonPosition(); // Reset drag button position
-        updateGameDisplay(); // Call to show the first step
-        console.log(`New Game Started. Current target: ${masterSequence[currentRoundIndex]}`);
+    updateGameDisplay();
+    speak(`Round ${currentRound}. Please enter the ${currentRound} item sequence.`);
+    // Optionally display the numbers to repeat
+    // sequenceDisplay.textContent = currentSolution.slice(0, currentRound).join('');
+}
+
+// Handles input from number buttons
+function handleNumberInput(number) {
+    if (!isSequencePhase) return; // Only accept input during sequence phase
+
+    currentSequence.push(number);
+    updateGameDisplay();
+
+    // Check if the current number matches the solution for this position
+    if (currentSequence[currentSequence.length - 1] === currentSolution[currentSequence.length - 1]) {
+        // Correct number entered
+        showFeedback(true);
+        playSound('correct');
+
+        if (currentSequence.length === currentRound) {
+            // Sequence for this round is complete
+            isSequencePhase = false;
+            isHoldPhase = true;
+            updateGameDisplay();
+            startHoldPhase();
+        }
+    } else {
+        // Incorrect number entered
+        showFeedback(false);
+        playSound('incorrect');
+        endGame(false); // Player loses
     }
+}
 
-    function updateGameDisplay() {
-        const sequenceToShow = masterSequence.slice(0, currentRoundIndex + 1);
-        sequenceDisplay.textContent = `Sequence: ${sequenceToShow.join(' -> ')}`;
-        gameMessage.textContent = `Repeat the sequence of ${currentRoundIndex + 1} item(s).`;
-        console.log(`Current round requires ${currentRoundIndex + 1} items.`);
-        console.log(`Expected input for current step: ${masterSequence[playerInputIndex]}`);
-    }
+// Starts the hold phase countdown
+function startHoldPhase() {
+    holdTimer = 3; // 3-second hold
+    countdownDisplay.classList.remove('hidden');
+    countdownTimer.textContent = holdTimer;
+    speak(`Hold for ${holdTimer} seconds.`);
 
-    function showFeedback(isCorrect) {
-        feedbackOverlay.classList.remove('hidden');
-        if (isCorrect) {
-            feedbackOverlay.style.backgroundColor = 'rgba(0, 128, 0, 0.7)';
+    countdownInterval = setInterval(() => {
+        holdTimer--;
+        countdownTimer.textContent = holdTimer;
+        if (holdTimer <= 0) {
+            clearInterval(countdownInterval);
+            countdownDisplay.classList.add('hidden');
+            isHoldPhase = false;
+            isDragPhase = true; // Transition to drag phase
+            canDrag = true; // Enable drag for the next phase
+            updateGameDisplay();
+            speak(`Now drag the icon to match the sequence!`);
         } else {
-            feedbackOverlay.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
+            speak(`${holdTimer}.`);
         }
+    }, 1000);
+}
 
-        setTimeout(() => {
-            feedbackOverlay.classList.add('hidden');
-            feedbackOverlay.style.backgroundColor = '';
-        }, 500);
+// Updates the display based on game state
+function updateGameDisplay() {
+    // displayedSolutionNumber.textContent = `Solution: ${currentSolution.join('')}`; // Hide solution
+    gameMessage.textContent = ''; // Clear initial message
+
+    if (isSequencePhase) {
+        gameMessage.textContent = `Enter the ${currentRound} item(s) in the sequence.`;
+        sequenceDisplay.textContent = currentSequence.join('');
+    } else if (isHoldPhase) {
+        // Message is handled by countdownDisplay
+        sequenceDisplay.textContent = '';
+    } else if (isDragPhase) {
+        gameMessage.textContent = `Drag to match the ${currentRound} item(s) sequence.`;
+        sequenceDisplay.textContent = currentDragSequence.join('');
+    } else {
+        gameMessage.textContent = 'Game Ready!';
+        sequenceDisplay.textContent = '';
+    }
+}
+
+// --- Drag & Drop Logic ---
+
+// Resets the drag button's position
+function resetDragButtonPosition() {
+    dragStartButton.style.left = '50%';
+    dragStartButton.style.top = '50%';
+    dragStartButton.style.transform = 'translate(-50%, -50%)';
+    dragStartButton.style.transition = 'left 0.1s, top 0.1s'; // Smooth return
+}
+
+// Starts the drag operation
+function startDrag(e) {
+    // REMOVED THE if (!canDrag) return; CHECK HERE
+    // The dragStartButton can now always be moved, regardless of game phase.
+
+    isDragging = true;
+    dragStartButton.style.transition = 'none'; // Disable transition during drag
+    const rect = dragStartButton.getBoundingClientRect();
+    initialX = rect.left;
+    initialY = rect.top;
+
+    if (e.type === 'touchstart') {
+        dragStartX = e.touches[0].clientX;
+        dragStartY = e.touches[0].clientY;
+    } else {
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
     }
 
-    function checkInput(playerInput) {
-        console.log(`--- checkInput called ---`);
-        console.log(`Current Round Index: ${currentRoundIndex}, Player Input Index: ${playerInputIndex}`);
-        console.log(`Player Input: "${playerInput}", Expected Input: "${masterSequence[playerInputIndex]}"`);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    document.addEventListener('touchmove', onMouseMove, { passive: false });
+    document.addEventListener('touchend', onMouseUp);
 
-        let expectedInput = masterSequence[playerInputIndex];
+    // Add a class for visual feedback during drag
+    dragStartButton.classList.add('dragging');
+}
 
-        // Specific handling for 'speak' input type
-        if (expectedInput === 'speak') {
-            const requiredWord = "alien";
+// Handles drag movement
+function onMouseMove(e) {
+    if (!isDragging) return;
 
-            if (playerInput && playerInput !== 'no-speech-detected') {
-                if (playerInput === requiredWord) {
-                    playerInput = 'speak';
-                } else {
-                    gameMessage.textContent = `You said "${playerInput}". Expected "${requiredWord}".`;
-                    playerInput = 'incorrect-speak-attempt';
-                }
-            } else {
-                gameMessage.textContent = `No speech detected or an error occurred. Expected "${requiredWord}".`;
-                playerInput = 'incorrect-speak-attempt';
-            }
+    let currentX, currentY;
+    if (e.type === 'touchmove') {
+        currentX = e.touches[0].clientX;
+        currentY = e.touches[0].clientY;
+        e.preventDefault(); // Prevent scrolling on mobile during drag
+    } else {
+        currentX = e.clientX;
+        currentY = e.clientY;
+    }
+
+    const dx = currentX - dragStartX;
+    const dy = currentY - dragStartY;
+
+    // Apply movement
+    dragStartButton.style.left = `${initialX + dx}px`;
+    dragStartButton.style.top = `${initialY + dy}px`;
+
+    // Check for collision with targets
+    checkCollisionWithTargets(currentX, currentY);
+}
+
+// Checks if the draggable icon is over a target
+function checkCollisionWithTargets(x, y) {
+    const targets = [dragTargetUp, dragTargetLeft, dragTargetRight, dragTargetDown];
+    let foundTarget = null;
+
+    targets.forEach(target => {
+        const rect = target.getBoundingClientRect();
+        if (x > rect.left && x < rect.right && y > rect.top && y < rect.bottom) {
+            foundTarget = target;
         }
-
-        // Check for 'hold-button-X' inputs (single button hold)
-        if (expectedInput.startsWith('hold-button-')) {
-            // If the playerInput is not a 'hold-button' result, it's immediately incorrect
-            if (!playerInput.startsWith('hold-button-')) {
-                gameMessage.textContent = `Incorrect! Expected a hold action.`;
-                playerInput = 'incorrect-hold-attempt'; // Force an incorrect input
-            } else if (playerInput === expectedInput + '-correct') {
-                playerInput = expectedInput; // Normalize to match masterSequence for success
-            } else {
-                gameMessage.textContent = `Incorrect hold for ${expectedInput.replace('hold-', '')}.`;
-                playerInput = 'incorrect-hold-attempt'; // Force an incorrect input
-            }
-        }
-
-        // Check for 'hold-two-buttons-1-3' input (new multi-button hold)
-        if (expectedInput === 'hold-two-buttons-1-3') {
-            // If the playerInput is not a 'multi-hold' result, it's immediately incorrect
-            if (!playerInput.startsWith('multi-hold-')) {
-                 gameMessage.textContent = `Incorrect! Expected a multi-button hold.`;
-                 playerInput = 'incorrect-multi-hold-attempt'; // Force an incorrect input
-            } else if (playerInput === 'multi-hold-2-correct') {
-                playerInput = expectedInput; // Normalize to match masterSequence for success
-            } else {
-                gameMessage.textContent = `Incorrect multi-button hold. Must hold button 1 and 3 simultaneously.`;
-                playerInput = 'incorrect-multi-hold-attempt'; // Force an incorrect input
-            }
-        }
-
-        // Check for 'drag-direction' inputs
-        if (expectedInput.startsWith('drag-')) {
-            if (playerInput === expectedInput) { // Direct match for drag input
-                playerInput = expectedInput; // Normalize for success
-            } else {
-                gameMessage.textContent = `Incorrect drag! Expected to drag ${expectedInput.replace('drag-', '')}.`;
-                playerInput = 'incorrect-drag-attempt'; // Force an incorrect input
-            }
-        }
-
-
-        if (playerInput === masterSequence[playerInputIndex]) {
-            console.log(`Input MATCHES expected. Proceeding...`);
-            playerInputIndex++;
-            showFeedback(true);
-            stopCountdown(); // Stop countdown on correct input
-
-            setTimeout(() => {
-                if (playerInputIndex > currentRoundIndex) {
-                    console.log(`Round ${currentRoundIndex + 1} completed!`);
-                    currentRoundIndex++;
-                    playerInputIndex = 0; // Reset player input for the new round
-                    multiHoldEvaluatedThisRound = false; // Reset for next round
-                    resetDragButtonPosition(); // Reset drag button position after round completion
-
-                    if (currentRoundIndex === masterSequence.length) {
-                        gameMessage.textContent = 'Congratulations! You solved the entire sequence!';
-                        console.log('Game Won!');
-                        showScreen(winScreen);
-                        setTimeout(() => {
-                            showScreen(homepageScreen);
-                        }, 3000);
-                    } else {
-                        gameMessage.textContent = `Correct! Now repeat the sequence of ${currentRoundIndex + 1} item(s).`;
-                        updateGameDisplay(); // Update display for the new round
-                    }
-                } else {
-                    gameMessage.textContent = `Correct! Enter the next item: ${masterSequence[playerInputIndex]}.`;
-                }
-                console.log(`After processing: Current Round Index: ${currentRoundIndex}, Player Input Index: ${playerInputIndex}`);
-            }, 500);
-        } else {
-            console.log(`Input DOES NOT MATCH expected. Resetting sequence.`);
-            showFeedback(false);
-            stopCountdown(); // Stop countdown on incorrect input
-            resetDragButtonPosition(); // Reset drag button position on incorrect input
-
-            setTimeout(() => {
-                gameMessage.textContent = `Incorrect! Sequence reset. Repeat the sequence of ${currentRoundIndex + 1} item(s).`;
-                playerInputIndex = 0; // Reset player input for the current round
-                multiHoldEvaluatedThisRound = false; // Reset for next attempt
-                console.log('Sequence reset. Player must try again from the start of the current round.');
-            }, 500);
-        }
-    }
-
-    // --- Countdown Timer Functions ---
-    function startCountdown() {
-        let timeLeft = HOLD_DURATION / 1000; // Convert to seconds
-        countdownTimerSpan.textContent = timeLeft;
-        countdownDisplay.classList.remove('hidden');
-
-        clearInterval(countdownInterval); // Clear any existing interval
-        countdownInterval = setInterval(() => {
-            timeLeft--;
-            countdownTimerSpan.textContent = timeLeft;
-            if (timeLeft <= 0) {
-                clearInterval(countdownInterval);
-                // The hold logic already handles correctness, this is just visual
-            }
-        }, 1000); // Update every second
-    }
-
-    function stopCountdown() {
-        clearInterval(countdownInterval);
-        countdownDisplay.classList.add('hidden');
-        countdownTimerSpan.textContent = '';
-    }
-
-    // --- Drag and Drop Functions ---
-    function resetDragButtonPosition() {
-        // Get the bounding rect of the drag board to center the button relative to it
-        const boardRect = dragBoard.getBoundingClientRect();
-        const buttonWidth = dragStartButton.offsetWidth;
-        const buttonHeight = dragStartButton.offsetHeight;
-
-        // Calculate center position relative to the board
-        const centerX = (boardRect.width / 2) - (buttonWidth / 2);
-        const centerY = (boardRect.height / 2) - (buttonHeight / 2);
-
-        dragStartButton.style.position = 'absolute'; // Ensure absolute positioning
-        dragStartButton.style.left = centerX + 'px';
-        dragStartButton.style.top = centerY + 'px';
-        dragStartButton.style.transform = 'none'; // Remove any previous transforms
-        dragStartButton.classList.remove('opacity-50'); // Ensure full opacity
-        removeTargetHighlights();
-    }
-
-    function getElementRect(el) {
-        const rect = el.getBoundingClientRect();
-        // Return rect relative to the viewport, as clientX/Y are also relative to viewport
-        return {
-            left: rect.left,
-            top: rect.top,
-            right: rect.right,
-            bottom: rect.bottom,
-            width: rect.width,
-            height: rect.height
-        };
-    }
-
-    function isOverlapping(rect1, rect2) {
-        return !(rect1.right < rect2.left ||
-                 rect1.left > rect2.right ||
-                 rect1.bottom < rect2.top ||
-                 rect1.top > rect2.bottom);
-    }
-
-    function startDrag(e) {
-        if (masterSequence[playerInputIndex].startsWith('drag-')) {
-            isDraggingElement = true;
-            dragStartButton.classList.add('opacity-50', 'transition-none'); // Add visual feedback for dragging
-            dragStartButton.style.cursor = 'grabbing';
-
-            // Get clientX/Y based on event type (mouse or touch)
-            const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
-            const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
-
-            // Calculate offset relative to the element's top-left corner
-            const rect = dragStartButton.getBoundingClientRect();
-            dragOffsetX = clientX - rect.left;
-            dragOffsetY = clientY - rect.top;
-
-            // Add global listeners for dragging
-            // Important: Use `window` or `document` for `mousemove`/`touchmove` and `mouseup`/`touchend`
-            // to ensure tracking continues even if the cursor/finger leaves the draggable element.
-            document.addEventListener('mousemove', doDrag);
-            document.addEventListener('mouseup', endDrag);
-            document.addEventListener('touchmove', doDrag, { passive: false });
-            document.addEventListener('touchend', endDrag);
-        } else {
-            // If not a drag step, prevent dragging
-            e.preventDefault();
-        }
-    }
-
-    function doDrag(e) {
-        if (!isDraggingElement) return;
-        e.preventDefault(); // Prevent scrolling on touch devices during drag
-
-        const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
-        const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
-
-        // Get the dragBoard's position to calculate relative positioning
-        const boardRect = dragBoard.getBoundingClientRect();
-
-        // Calculate new position relative to the dragBoard's top-left
-        let newLeft = clientX - dragOffsetX - boardRect.left;
-        let newTop = clientY - dragOffsetY - boardRect.top;
-
-        // Constrain the draggable button within the dragBoard boundaries
-        const buttonWidth = dragStartButton.offsetWidth;
-        const buttonHeight = dragStartButton.offsetHeight;
-
-        newLeft = Math.max(0, Math.min(newLeft, boardRect.width - buttonWidth));
-        newTop = Math.max(0, Math.min(newTop, boardRect.height - buttonHeight));
-
-        // Apply position
-        dragStartButton.style.left = newLeft + 'px';
-        dragStartButton.style.top = newTop + 'px';
-
-        const draggableRect = getElementRect(dragStartButton);
-        let hoveredTarget = null;
-
-        removeTargetHighlights(); // Clear previous highlights
-
-        for (const targetId in dragTargets) {
-            const targetElement = dragTargets[targetId];
-            const targetRect = getElementRect(targetElement);
-
-            if (isOverlapping(draggableRect, targetRect)) {
-                targetElement.classList.add('bg-blue-500', 'text-white'); // Highlight
-                hoveredTarget = targetId;
-                break; // Only highlight one target at a time
-            }
-        }
-        currentTarget = hoveredTarget; // Update current target
-    }
-
-    function endDrag(e) {
-        if (!isDraggingElement) return;
-        isDraggingElement = false;
-        dragStartButton.classList.remove('opacity-50', 'transition-none');
-        dragStartButton.style.cursor = 'grab';
-
-        // Remove global listeners
-        document.removeEventListener('mousemove', doDrag);
-        document.removeEventListener('mouseup', endDrag);
-        document.removeEventListener('touchmove', doDrag);
-        document.removeEventListener('touchend', endDrag);
-
-        removeTargetHighlights(); // Clear highlights
-
-        // Determine the result of the drag
-        if (currentTarget) {
-            // Extract direction from target ID (e.g., 'drag-target-up' -> 'drag-up')
-            const dragResult = 'drag-' + currentTarget.replace('drag-target-', '');
-            checkInput(dragResult);
-        } else {
-            // Drag ended without being over any target
-            checkInput('drag-no-target'); // Indicate an invalid drag
-        }
-
-        resetDragButtonPosition(); // Reset button to center after drag
-        currentTarget = null; // Reset current target
-    }
-
-    function removeTargetHighlights() {
-        for (const targetId in dragTargets) {
-            dragTargets[targetId].classList.remove('bg-blue-500', 'text-white');
-        }
-    }
-
-
-    // --- Event Listeners ---
-
-    alienButton.addEventListener('click', () => {
-        showScreen(alienGameScreen);
-        solutionNumberInput.value = '';
     });
 
-    startGameButton.addEventListener('click', () => {
-        const solutionNumber = solutionNumberInput.value;
+    if (foundTarget && foundTarget !== activeTarget) {
+        if (activeTarget) {
+            activeTarget.classList.remove('bg-purple-400', 'scale-110'); // Remove highlight from old
+            activeTarget.classList.add('bg-gray-300'); // Restore default
+        }
+        foundTarget.classList.remove('bg-gray-300'); // Remove default
+        foundTarget.classList.add('bg-purple-400', 'scale-110'); // Add highlight
+        activeTarget = foundTarget;
+    } else if (!foundTarget && activeTarget) {
+        activeTarget.classList.remove('bg-purple-400', 'scale-110'); // Remove highlight
+        activeTarget.classList.add('bg-gray-300'); // Restore default
+        activeTarget = null;
+    }
+}
 
-        if (solutionNumber.trim() === '') {
-            alert('Please enter a solution number to start.');
+
+// Handles the end of a drag operation (drop)
+function onMouseUp(e) {
+    if (!isDragging) return;
+
+    isDragging = false;
+    dragStartButton.classList.remove('dragging');
+    dragStartButton.style.transition = 'left 0.1s, top 0.1s'; // Re-enable transition
+
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+    document.removeEventListener('touchmove', onMouseMove);
+    document.removeEventListener('touchend', onMouseUp);
+
+    // Remove any active target highlight
+    if (activeTarget) {
+        activeTarget.classList.remove('bg-purple-400', 'scale-110');
+        activeTarget.classList.add('bg-gray-300');
+        activeTarget = null;
+    }
+
+    // Determine which target was dropped on, if any
+    let droppedTarget = null;
+    const targets = [dragTargetUp, dragTargetLeft, dragTargetRight, dragTargetDown];
+    let dropX, dropY;
+
+    if (e.type.startsWith('touch')) {
+        // Use changedTouches for touchend
+        if (e.changedTouches.length > 0) {
+            dropX = e.changedTouches[0].clientX;
+            dropY = e.changedTouches[0].clientY;
+        } else { // Fallback if no changedTouches (shouldn't happen for touchend reliably)
+            resetDragButtonPosition(); // Just reset if no touch data
             return;
         }
-
-        displayedSolutionNumber.textContent = `Solution: ${solutionNumber}`;
-        showScreen(solutionDisplayScreen);
-        console.log('Starting Alien game with Solution Number:', solutionNumber);
-        initializeGame();
-    });
-
-    backToHomeButton.addEventListener('click', () => {
-        showScreen(homepageScreen);
-    });
-
-    solutionBackButton.addEventListener('click', () => {
-        currentRoundIndex = 0;
-        playerInputIndex = 0;
-        confirmationModal.classList.remove('hidden');
-    });
-
-    confirmYesButton.addEventListener('click', () => {
-        showScreen(homepageScreen);
-    });
-
-    confirmNoButton.addEventListener('click', () => {
-        confirmationModal.classList.add('hidden');
-        initializeGame();
-    });
-
-    // --- Numbered Buttons Logic (Updated for single and multi-hold) ---
-    numberButtons.forEach(button => {
-        const buttonId = button.id; // e.g., 'button-1'
-
-        // Mouse down / Touch start
-        button.addEventListener('mousedown', (e) => startHold(e, buttonId));
-        button.addEventListener('touchstart', (e) => startHold(e, buttonId), { passive: false });
-
-        // Mouse up / Touch end
-        button.addEventListener('mouseup', () => endHold(buttonId));
-        button.addEventListener('touchend', () => endHold(buttonId));
-        button.addEventListener('mouseleave', () => { // If mouse leaves button while holding
-            if (buttonHoldState[buttonId].isHolding) {
-                endHold(buttonId, true); // Treat as release, potentially incorrect
-            }
-        });
-    });
-
-    function startHold(e, buttonId) {
-        e.preventDefault(); // Prevent default browser actions (e.g., text selection)
-        buttonHoldState[buttonId].isHolding = true;
-        buttonHoldState[buttonId].isHeldForDuration = false; // Reset for new hold
-        activeHeldButtons.add(buttonId); // Add to set of currently held buttons
-
-        // Start individual button timer ONLY if the current expected input is a single button hold
-        if (masterSequence[playerInputIndex].startsWith('hold-button-')) {
-            holdTimers[buttonId] = setTimeout(() => {
-                buttonHoldState[buttonId].isHeldForDuration = true;
-                console.log(`${buttonId} held for ${HOLD_DURATION / 1000} seconds!`);
-            }, HOLD_DURATION);
-            startCountdown(); // Start countdown for single hold
-        }
-
-        console.log(`Started holding ${buttonId}. Active holds: ${Array.from(activeHeldButtons).join(', ')}`);
-
-        // Check for multi-button hold condition immediately on press
-        if (masterSequence[playerInputIndex] === 'hold-two-buttons-1-3') {
-            const requiredButtons = new Set(['button-1', 'button-3']);
-            const allRequiredPressed = Array.from(requiredButtons).every(btn => activeHeldButtons.has(btn));
-            const noExtraButtons = activeHeldButtons.size === requiredButtons.size;
-
-            if (allRequiredPressed && noExtraButtons) {
-                twoButtonsHeldCorrectlyThisAttempt = true;
-                gameMessage.textContent = 'Holding button 1 and 3...';
-                // Only start countdown if it's not already running for this multi-hold attempt
-                if (countdownInterval === null) {
-                    startCountdown(); // Start countdown for multi-hold (visual only, no duration required for correctness)
-                }
-            } else {
-                twoButtonsHeldCorrectlyThisAttempt = false; // Reset if incorrect combination
-                stopCountdown(); // Stop countdown if combination is broken
-                // If the combination is broken, and it hasn't been evaluated yet, mark incorrect immediately
-                if (!multiHoldEvaluatedThisRound) {
-                    checkInput('multi-hold-2-incorrect');
-                    multiHoldEvaluatedThisRound = true; // Prevent further checks for this attempt
-                }
-            }
-        }
+    } else {
+        dropX = e.clientX;
+        dropY = e.clientY;
     }
 
-    function endHold(buttonId, wasMouseLeave = false) {
-        if (!buttonHoldState[buttonId].isHolding) return; // Not holding, so ignore release
+    targets.forEach(target => {
+        const rect = target.getBoundingClientRect();
+        if (dropX > rect.left && dropX < rect.right && dropY > rect.top && dropY < rect.bottom) {
+            droppedTarget = target;
+        }
+    });
 
-        clearTimeout(holdTimers[buttonId]); // Stop the individual button timer
-        buttonHoldState[buttonId].isHolding = false; // Reset holding state
-        activeHeldButtons.delete(buttonId); // Remove from set of currently held buttons
+    if (droppedTarget) {
+        handleDrop(droppedTarget.id);
+    } else {
+        // If dropped outside any target, reset position
+        resetDragButtonPosition();
+        if (isDragPhase) { // Only provide feedback if they were in the correct phase to drag
+            showFeedback(false); // Incorrect, dropped in empty space
+            playSound('incorrect');
+            gameMessage.textContent = 'Incorrect! Dropped in empty space.';
+            // Do not end game immediately for just dropping outside, let them retry or mark as mistake
+        }
+    }
+}
 
-        console.log(`Released ${buttonId}. Active holds: ${Array.from(activeHeldButtons).join(', ')}`);
+// Handles a valid drop onto a target
+function handleDrop(targetId) {
+    let directionValue = 0; // Default or invalid
 
-        // Check if the current expected input is a multi-button hold
-        if (masterSequence[playerInputIndex] === 'hold-two-buttons-1-3') {
-            const requiredButtons = new Set(['button-1', 'button-3']);
+    if (targetId === 'drag-target-up') directionValue = 1;
+    else if (targetId === 'drag-target-left') directionValue = 2;
+    else if (targetId === 'drag-target-right') directionValue = 3;
+    else if (targetId === 'drag-target-down') directionValue = 4;
 
-            // If the released button is one of the required buttons AND the multi-hold hasn't been evaluated yet
-            if (requiredButtons.has(buttonId) && !multiHoldEvaluatedThisRound) {
-                if (twoButtonsHeldCorrectlyThisAttempt) {
-                    checkInput('multi-hold-2-correct');
-                } else {
-                    checkInput('multi-hold-2-incorrect');
-                }
-                multiHoldEvaluatedThisRound = true; // Mark as evaluated for this round
-                twoButtonsHeldCorrectlyThisAttempt = false; // Reset for next attempt
-                stopCountdown(); // Stop countdown
+    // IMPORTANT: Only validate against sequence if it's the correct phase
+    if (isDragPhase) {
+        currentDragSequence.push(directionValue);
+        updateGameDisplay();
+
+        if (directionValue === currentSolution[solutionIndex]) {
+            showFeedback(true);
+            playSound('correct');
+            solutionIndex++; // Move to next item in solution
+
+            if (solutionIndex === currentRound) {
+                // Drag sequence for this round is complete
+                currentRound++; // Advance to the next round
+                resetDragButtonPosition();
+                startRound(); // Start the next number input round
             }
-            // If it's not a required button, or already evaluated, do nothing here for multi-hold.
-        } else if (masterSequence[playerInputIndex].startsWith('hold-button-')) {
-            // If the current expected input is a single button hold, process it here
-            const heldCorrectly = buttonHoldState[buttonId].isHeldForDuration;
-            const inputString = heldCorrectly ? `hold-${buttonId}-correct` : `hold-${buttonId}-incorrect`;
-            console.log(`Released ${buttonId}. Held correctly: ${heldCorrectly}. Input: ${inputString}`);
-            checkInput(inputString);
-            stopCountdown(); // Stop countdown on single hold release
         } else {
-            // For regular button presses that are NOT part of a hold sequence
-            // This ensures button presses are checked if they are the expected input
-            // and not part of a hold event that's already handled.
-            checkInput(buttonId);
+            showFeedback(false);
+            playSound('incorrect');
+            endGame(false); // Incorrect drag, player loses
         }
+    } else {
+        // Player dragged and dropped, but it wasn't the correct phase.
+        // The icon moves, but no game logic consequence (as per user's request for "make a mistake")
+        // Optionally, give a subtle feedback that it's not the right time, but don't end game.
+        // For now, it just resets position visually.
+        resetDragButtonPosition();
+        gameMessage.textContent = 'Not the right time for that yet!';
+        speak('Not yet!');
     }
+    resetDragButtonPosition(); // Always reset position after a drop
+}
 
 
-    // --- Drag Start Button Event Listeners ---
-    dragStartButton.addEventListener('mousedown', startDrag);
-    dragStartButton.addEventListener('touchstart', startDrag, { passive: false });
+// --- Game Flow Control ---
+
+function endGame(win) {
+    if (win) {
+        showScreen('win-screen');
+        playSound('win');
+        speak('Congratulations! You win!');
+        // Optionally, show win screen for a bit, then return to homepage
+        setTimeout(() => {
+            showScreen('homepage-screen');
+            resetGameState();
+        }, 5000); // Show win screen for 5 seconds
+    } else {
+        // Player loses, show feedback, maybe a message, then return to homepage
+        gameMessage.textContent = 'Game Over! Incorrect sequence.';
+        speak('Game over! Incorrect sequence.');
+        setTimeout(() => {
+            showScreen('homepage-screen');
+            resetGameState();
+        }, 2000); // Return to home after 2 seconds
+    }
+}
+
+
+// --- Event Listeners ---
+
+// Homepage to Alien Game
+alienButton.addEventListener('click', () => {
+    showScreen('alien-game-screen');
+    solutionNumberInput.value = ''; // Clear previous input
+    solutionNumberInput.focus();
+});
+
+// Start Game from Alien Game Screen
+startGameButton.addEventListener('click', () => {
+    const solutionNum = parseInt(solutionNumberInput.value, 10);
+    if (isNaN(solutionNum) || solutionNum <= 0) {
+        alert('Please enter a valid positive number for the solution.');
+        return;
+    }
+    generateSolution(solutionNum);
+    showScreen('solution-display-screen');
+    resetGameState(); // Ensure a clean state before starting
+    displayedSolutionNumber.textContent = `Solution: ${solutionNum}`; // Display solution number at top
+    startRound(); // Start the first round
+});
+
+// Back to Home
+backToHomeButton.addEventListener('click', () => {
+    showScreen('homepage-screen');
+    resetGameState();
+});
+
+// Solution screen back button (show confirmation modal)
+solutionBackButton.addEventListener('click', () => {
+    confirmationModal.classList.remove('hidden');
+});
+
+confirmYesButton.addEventListener('click', () => {
+    confirmationModal.classList.add('hidden');
+    showScreen('homepage-screen');
+    resetGameState();
+});
+
+confirmNoButton.addEventListener('click', () => {
+    confirmationModal.classList.add('hidden');
+});
+
+
+// Number input buttons
+button1.addEventListener('click', () => handleNumberInput(1));
+button2.addEventListener('click', () => handleNumberInput(2));
+button3.addEventListener('click', () => handleNumberInput(3));
+button4.addEventListener('click', () => handleNumberInput(4));
+
+// Speak Button
+speakButton.addEventListener('click', () => {
+    if (isSequencePhase) {
+        speak(`Round ${currentRound}. Please enter the ${currentRound} item sequence.`);
+    } else if (isDragPhase) {
+        speak(`Drag the icon to match the ${currentRound} item sequence.`);
+    } else if (isHoldPhase) {
+        speak(`Hold for ${holdTimer} seconds.`);
+    } else {
+        speak('Game Ready!');
+    }
+});
+
+
+// Drag Start Button Event Listeners
+dragStartButton.addEventListener('mousedown', startDrag);
+dragStartButton.addEventListener('touchstart', startDrag, { passive: false }); // for mobile
+
+// Listeners for mouse/touch release over the entire document
+document.addEventListener('mouseup', onMouseUp);
+document.addEventListener('touchend', onMouseUp);
+
+// Initial setup
+document.addEventListener('DOMContentLoaded', () => {
+    showScreen('homepage-screen');
+    resetGameState();
 });
