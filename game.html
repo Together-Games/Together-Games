@@ -3,74 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Alien Memory Challenge - v0.4</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #0b0c10;
-      color: #c5c6c7;
-      text-align: center;
-      padding: 40px;
-    }
-
-    .button-grid {
-      display: flex;
-      justify-content: center;
-      gap: 20px;
-      margin-top: 30px;
-    }
-
-    .game-button {
-      width: 80px;
-      height: 80px;
-      font-size: 24px;
-      border-radius: 10px;
-      border: none;
-      background-color: #45a29e;
-      color: white;
-      cursor: pointer;
-      transition: transform 0.1s;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-
-    .game-button:active {
-      transform: scale(0.95);
-      background-color: #66fcf1;
-    }
-
-    #micButton {
-      margin-top: 30px;
-      padding: 15px 30px;
-      font-size: 18px;
-      border-radius: 10px;
-      background-color: #1f2833;
-      color: #66fcf1;
-      border: 2px solid #66fcf1;
-      cursor: pointer;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-
-    #status {
-      margin-top: 20px;
-      font-size: 24px;
-      color: #c5c6c7;
-    }
-
-    #sequenceDisplay {
-      margin-top: 20px;
-      font-size: 16px;
-      color: #66fcf1;
-      white-space: pre-wrap;
-    }
-
-    footer {
-      margin-top: 40px;
-      font-size: 0.9em;
-      color: #888;
-    }
-  </style>
+  <title>Alien Memory Challenge - Modular</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <h2>Alien Memory Challenge</h2>
@@ -91,151 +25,16 @@
   <audio id="correctSound" src="correct.mp3" preload="auto"></audio>
   <audio id="incorrectSound" src="incorrect.mp3" preload="auto"></audio>
 
-  <script>
-    const sequence = [2, "H4", 1, "Zorgon", "H3", 2];
-    let currentStep = 0;
-    let playerProgress = [];
+  <script type="module">
+    import { setupGame } from './gameLogic.js';
+    import { initTapInput } from './tapInput.js';
+    import { initHoldInput } from './holdInput.js';
+    import { initVoiceInput } from './voiceInput.js';
 
-    const correctSound = document.getElementById('correctSound');
-    const incorrectSound = document.getElementById('incorrectSound');
-    const status = document.getElementById('status');
-    const sequenceDisplay = document.getElementById('sequenceDisplay');
-
-    function playSound(sound) {
-      if (sound) {
-        sound.pause();
-        sound.currentTime = 0;
-        sound.play().catch(err => console.warn("Sound play blocked:", err));
-      }
-    }
-
-    function updateSequenceDisplay() {
-      sequenceDisplay.textContent = sequence
-        .slice(0, currentStep + 1)
-        .map((step, i) => `${i + 1}. ${step}`)
-        .join('\n');
-    }
-
-    function validateProgress(input) {
-      playerProgress.push(input);
-
-      for (let i = 0; i < playerProgress.length; i++) {
-        if (playerProgress[i] !== sequence[i]) {
-          playSound(incorrectSound);
-          status.textContent = '❌ Incorrect! Try again.';
-          currentStep = 0;
-          playerProgress = [];
-          updateSequenceDisplay();
-          return;
-        }
-      }
-
-      playSound(correctSound);
-
-      if (playerProgress.length === currentStep + 1) {
-        currentStep++;
-        playerProgress = [];
-
-        if (currentStep === sequence.length) {
-          status.textContent = '🎉 You Win!';
-        } else {
-          status.textContent = `✅ Good! Now repeat ${currentStep + 1} steps.`;
-        }
-
-        updateSequenceDisplay();
-      }
-    }
-
-    // ✅ Tap vs Hold logic
-    document.querySelectorAll('.game-button').forEach(button => {
-      const num = button.getAttribute('data-num');
-      let holdTimer;
-      let held = false;
-
-      const startHold = () => {
-        held = false;
-        holdTimer = setTimeout(() => {
-          held = true;
-          validateProgress(`H${num}`);
-        }, 2000); // 2 seconds for hold
-      };
-
-      const endHold = () => {
-        clearTimeout(holdTimer);
-        if (!held) {
-          validateProgress(parseInt(num)); // Tap
-        }
-      };
-
-      // Mouse events
-      button.addEventListener('mousedown', startHold);
-      button.addEventListener('mouseup', endHold);
-
-      // Touch events
-      button.addEventListener('touchstart', startHold);
-      button.addEventListener('touchend', endHold);
-    });
-
-    // 🎙️ Voice Recognition
-    const micButton = document.getElementById('micButton');
-    let recognition;
-
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
-
-      recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript.trim().toLowerCase();
-        console.log("Heard:", transcript);
-
-        if (transcript === 'zorgon') {
-          validateProgress("Zorgon");
-        } else {
-          playSound(incorrectSound);
-          status.textContent = '❌ Wrong word! Try again.';
-          currentStep = 0;
-          playerProgress = [];
-          updateSequenceDisplay();
-        }
-      };
-
-      recognition.onerror = (e) => {
-        console.warn("Speech error:", e.error);
-        status.textContent = '⚠️ Voice error. Try again.';
-      };
-    } else {
-      micButton.disabled = true;
-      micButton.textContent = '🎙️ Voice not supported';
-    }
-
-    micButton.addEventListener('touchstart', () => {
-      if (recognition) recognition.start();
-      status.textContent = '🎧 Listening... Say "Zorgon"';
-    });
-
-    micButton.addEventListener('touchend', () => {
-      if (recognition) recognition.stop();
-      status.textContent = '🎙️ Stopped listening.';
-    });
-
-    micButton.addEventListener('mousedown', () => {
-      if (recognition) recognition.start();
-      status.textContent = '🎧 Listening... Say "Zorgon"';
-    });
-
-    micButton.addEventListener('mouseup', () => {
-      if (recognition) recognition.stop();
-      status.textContent = '🎙️ Stopped listening.';
-    });
-
-    updateSequenceDisplay();
+    const { validateProgress, status } = setupGame();
+    initTapInput(validateProgress);
+    initHoldInput(validateProgress);
+    initVoiceInput(validateProgress, status);
   </script>
-
-  <footer>
-    Version 0.4
-  </footer>
 </body>
 </html>
