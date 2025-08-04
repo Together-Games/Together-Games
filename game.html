@@ -30,6 +30,8 @@
       color: white;
       cursor: pointer;
       transition: transform 0.1s;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
     .game-button:active {
@@ -46,6 +48,8 @@
       color: #66fcf1;
       border: 2px solid #66fcf1;
       cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
     #status {
@@ -163,7 +167,6 @@
       status.textContent = '🎙️ Stopped listening.';
     });
 
-    // Also support mouse for desktop
     micButton.addEventListener('mousedown', () => {
       if (recognition) recognition.start();
       status.textContent = '🎧 Listening... Say "Zorgon"';
