@@ -1,36 +1,33 @@
-﻿import { detectTap } from './actions/tap.js';
-import { detectHold } from './actions/hold.js';
-import { detectTapMultiple } from './actions/tapMultiple.js';
-import { detectSpeak } from './actions/speak.js';
-import { detectDrag } from './actions/drag.js';
+﻿import { setupTap } from './actions/tap.js';
+import { setupSpeak } from './actions/speak.js';
+import { setupDrag } from './actions/drag.js';
 
-const sequence = ["tap", "drag", "speak", "hold", "tapMultiple"];
+const sequence = ["tap-1", "speak-simon", "drag-up", "tap-3"];
 let currentStep = 0;
 
-function listenForAction(action) {
-  const map = {
-    tap: detectTap,
-    hold: detectHold,
-    tapMultiple: detectTapMultiple,
-    speak: detectSpeak,
-    drag: detectDrag
-  };
-
-  map[action]((detected) => {
-    if (detected === sequence[currentStep]) {
-      currentStep++;
-      if (currentStep === sequence.length) {
-        alert("🎉 You win!");
-        currentStep = 0;
-      } else {
-        listenForAction(sequence[currentStep]);
-      }
-    } else {
-      alert("❌ Wrong gesture. Try again.");
-      currentStep = 0;
-      listenForAction(sequence[currentStep]);
-    }
-  });
+const progressDisplay = document.getElementById("progress");
+function updateProgress() {
+  progressDisplay.textContent = `Progress: ${currentStep} / ${sequence.length}`;
 }
 
-listenForAction(sequence[currentStep]);
+function checkAction(action) {
+  if (action === sequence[currentStep]) {
+    currentStep++;
+    updateProgress();
+    if (currentStep === sequence.length) {
+      alert("🎉 Sequence complete!");
+      currentStep = 0;
+      updateProgress();
+    }
+  } else {
+    alert("❌ Wrong action. Try again.");
+    currentStep = 0;
+    updateProgress();
+  }
+}
+
+// Initialize gesture handlers
+setupTap(["btn1", "btn2", "btn3", "btn4"], checkAction);
+setupSpeak("speak-button", checkAction);
+setupDrag("draggable", checkAction);
+updateProgress();

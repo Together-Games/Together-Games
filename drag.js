@@ -1,19 +1,36 @@
-export function detectDrag(callback) {
-  let startX = null;
+export function setupDrag(draggableId, checkAction) {
+  const draggable = document.getElementById(draggableId);
+  let offsetX, offsetY;
 
-  function onTouchStart(e) {
-    startX = e.touches[0].clientX;
-  }
+  draggable.addEventListener("touchstart", (e) => {
+    const touch = e.touches[0];
+    offsetX = touch.clientX - draggable.offsetLeft;
+    offsetY = touch.clientY - draggable.offsetTop;
+  });
 
-  function onTouchMove(e) {
-    const moveX = e.touches[0].clientX;
-    if (Math.abs(moveX - startX) > 50) {
-      callback("drag");
-      document.removeEventListener("touchstart", onTouchStart);
-      document.removeEventListener("touchmove", onTouchMove);
-    }
-  }
+  draggable.addEventListener("touchmove", (e) => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const x = touch.clientX - offsetX;
+    const y = touch.clientY - offsetY;
+    draggable.style.left = `${x}px`;
+    draggable.style.top = `${y}px`;
 
-  document.addEventListener("touchstart", onTouchStart);
-  document.addEventListener("touchmove", onTouchMove);
+    document.querySelectorAll(".drag-target").forEach(target => {
+      const rect1 = draggable.getBoundingClientRect();
+      const rect2 = target.getBoundingClientRect();
+      const overlap = !(rect1.right < rect2.left || 
+                        rect1.left > rect2.right || 
+                        rect1.bottom < rect2.top || 
+                        rect1.top > rect2.bottom);
+      if (overlap) {
+        checkAction(`drag-${target.dataset.zone}`);
+      }
+    });
+  });
+
+  draggable.addEventListener("touchend", () => {
+    draggable.style.left = "75px";
+    draggable.style.top = "75px";
+  });
 }
