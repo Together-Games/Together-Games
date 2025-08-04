@@ -3,9 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Alien Game</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>Alien Memory Challenge - Solution 1</title>
   <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #0b0c10;
+      color: #c5c6c7;
+      text-align: center;
+      padding: 40px;
+    }
+
     .button-grid {
       display: flex;
       justify-content: center;
@@ -44,53 +51,48 @@
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2>Alien Memory Challenge</h2>
-    <p id="sequenceDisplay"></p>
-    <div class="button-grid">
-      <button class="game-button" onclick="handleInput(1)">1</button>
-      <button class="game-button" onclick="handleInput(2)">2</button>
-      <button class="game-button" onclick="handleInput(3)">3</button>
-      <button class="game-button" onclick="handleInput(4)">4</button>
-    </div>
-    <div id="status"></div>
+  <h2>Alien Memory Challenge</h2>
+  <p><strong>Solution 1:</strong> [2, 4, 1, 3, 2, 1, 4, 3, 2, 1]</p>
+  <p id="sequenceDisplay"></p>
+
+  <div class="button-grid">
+    <button class="game-button" onclick="handleInput(1)">1</button>
+    <button class="game-button" onclick="handleInput(2)">2</button>
+    <button class="game-button" onclick="handleInput(3)">3</button>
+    <button class="game-button" onclick="handleInput(4)">4</button>
   </div>
 
-  <script>
-    const sequenceLength = 10;
-    const sequence = Array.from({ length: sequenceLength }, () =>
-      Math.floor(Math.random() * 4) + 1
-    );
+  <div id="status"></div>
 
+  <script>
+    const sequence = [2, 4, 1, 3, 2, 1, 4, 3, 2, 1]; // 🔒 Fixed Solution 1
     let currentStep = 0;
     let playerProgress = [];
 
     document.getElementById('sequenceDisplay').textContent =
-      `Sequence: ${sequence.join(' ')}`;
+      `Repeat the sequence step-by-step.`;
 
     function handleInput(num) {
       playerProgress.push(num);
 
-      // Check if current input matches the sequence so far
       for (let i = 0; i < playerProgress.length; i++) {
         if (playerProgress[i] !== sequence[i]) {
-          document.getElementById('status').textContent = 'Incorrect! Try again.';
+          document.getElementById('status').textContent = '❌ Incorrect! Try again.';
           playerProgress = [];
           currentStep = 0;
           return;
         }
       }
 
-      // If player completed current step correctly
       if (playerProgress.length === currentStep + 1) {
         currentStep++;
         playerProgress = [];
 
-        if (currentStep === sequenceLength) {
+        if (currentStep === sequence.length) {
           document.getElementById('status').textContent = '🎉 You Win!';
         } else {
           document.getElementById('status').textContent =
-            `Good! Now repeat ${currentStep + 1} steps.`;
+            `✅ Good! Now repeat ${currentStep + 1} steps.`;
         }
       }
     }

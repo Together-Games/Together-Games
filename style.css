@@ -1,6 +1,6 @@
 body {
   font-family: 'Orbitron', sans-serif;
-  background-image: (C:\Apps\Together Games\images\Mystical Alien Landscape.jpg); /* Replace with downloaded image path */
+  background-image: C:\Apps\Together Games\images\Mystical Alien Landscape.jpg; /* Replace with downloaded image path */
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
