@@ -215,4 +215,4 @@ initializeTapMultipleListener(recordPlayerInput);
 initializeDragListener(recordPlayerInput);
 
 // Start the game automatically when the page loads
-window.onload = startGame;
+document.addEventListener('DOMContentLoaded', startGame);
