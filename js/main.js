@@ -99,25 +99,26 @@ const resetGame = () => {
     startGame();
 };
 
-// Function to generate a fixed test sequence
+// Function to generate a fixed test sequence.
+// This is the static sequence that the player will follow.
 const generateSequence = () => {
     gameSequence = [
         { type: ACTIONS.TAP, id: 'btn-1' },
         { type: ACTIONS.HOLD, id: 'btn-2' },
         { type: ACTIONS.DRAG, id: 'up' },
-        { type: ACTIONS.TAP, id: 'btn-3' },
         { type: ACTIONS.SPEAK, id: 'mic-btn' },
-        { type: ACTIONS.DRAG, id: 'left' },
         { type: ACTIONS.TAP_MULTIPLE, id: 'buttons' },
+        { type: ACTIONS.DRAG, id: 'left' },
         { type: ACTIONS.TAP, id: 'btn-4' },
-        { type: ACTIONS.HOLD, id: 'btn-1' },
-        { type: ACTIONS.DRAG, id: 'down' }
+        { type: ACTIONS.HOLD, id: 'btn-3' },
+        { type: ACTIONS.DRAG, id: 'down' },
+        { type: ACTIONS.TAP, id: 'btn-2' }
     ];
     console.log("Game Sequence:", gameSequence);
     displaySequence(); // Display the sequence list immediately
 };
 
-// Function to display the sequence on the screen
+// Function to display the sequence on the screen for the player to see.
 const displaySequence = () => {
     sequenceList.innerHTML = '';
     const actionDescriptions = {
@@ -135,6 +136,9 @@ const displaySequence = () => {
             description += ` ${action.id.split('-')[1]}`;
         } else if (action.type === 'drag') {
             description += ` ${action.id} square`;
+        } else if (action.type === 'tapMultiple') {
+            // A more descriptive text for the Tap Multiple action
+            description = 'Tap and hold buttons 1 & 3';
         }
         li.textContent = description;
         sequenceList.appendChild(li);
@@ -178,6 +182,10 @@ const checkInput = () => {
     if (correctAction.type === playerAction.type && correctAction.id === playerAction.id) {
         isCorrect = true;
     }
+    // Special case for tapMultiple
+    if (correctAction.type === ACTIONS.TAP_MULTIPLE && playerAction.type === ACTIONS.TAP_MULTIPLE) {
+      isCorrect = true;
+    }
 
     if (!isCorrect) {
         // Game Over
@@ -215,4 +223,4 @@ initializeTapMultipleListener(recordPlayerInput);
 initializeDragListener(recordPlayerInput);
 
 // Start the game automatically when the page loads
-document.addEventListener('DOMContentLoaded', startGame);
+startGame();
