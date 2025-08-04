@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Alien Memory Challenge</title>
+  <title>Alien Memory Challenge - Solution 1</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -81,11 +81,19 @@
       font-size: 24px;
       color: #c5c6c7;
     }
+
+    #sequenceDisplay {
+      margin-top: 20px;
+      font-size: 16px;
+      color: #66fcf1;
+      white-space: pre-wrap;
+    }
   </style>
 </head>
 <body>
   <h2>Alien Memory Challenge</h2>
-  <p id="sequenceDisplay">Perform each action in order.</p>
+  <p><strong>Solution 1:</strong></p>
+  <div id="sequenceDisplay"></div>
 
   <div class="button-grid">
     <button class="game-button" onclick="handleTap(1)" id="btn1">1</button>
@@ -116,7 +124,12 @@
       { type: 'voice', value: 'zorgon' },
       { type: 'hold', value: true },
       { type: 'multiHold', value: [1, 3] },
-      { type: 'drag', value: 'up' }
+      { type: 'drag', value: 'up' },
+      { type: 'tap', value: 4 },
+      { type: 'voice', value: 'zorgon' },
+      { type: 'drag', value: 'left' },
+      { type: 'multiHold', value: [1, 3] },
+      { type: 'hold', value: true }
     ];
 
     let currentStep = 0;
@@ -125,6 +138,9 @@
     const status = document.getElementById('status');
     const correctSound = document.getElementById('correctSound');
     const incorrectSound = document.getElementById('incorrectSound');
+
+    document.getElementById('sequenceDisplay').textContent =
+      sequence.map((step, i) => `${i + 1}. ${step.type} → ${JSON.stringify(step.value)}`).join('\n');
 
     function advanceStep() {
       currentStep++;
@@ -143,7 +159,6 @@
       playerProgress = [];
     }
 
-    // 1. Tap
     function handleTap(num) {
       const step = sequence[currentStep];
       if (step.type === 'tap' && step.value === num) {
@@ -154,7 +169,7 @@
       }
     }
 
-    // 2. Voice
+    // Voice
     const micButton = document.getElementById('micButton');
     let recognition;
 
@@ -199,7 +214,7 @@
       status.textContent = '🎙️ Stopped listening.';
     });
 
-    // 3. Hold
+    // Hold
     let holdTimer;
     const holdButton = document.getElementById('holdButton');
 
@@ -227,40 +242,9 @@
     });
     holdButton.addEventListener('touchend', () => clearTimeout(holdTimer));
 
-    // 4. Multi-Hold
+    // Multi-Hold
     let multiHoldActive = new Set();
     ['btn1', 'btn3'].forEach(id => {
       const btn = document.getElementById(id);
       btn.addEventListener('mousedown', () => {
-        multiHoldActive.add(id);
-        checkMultiHold();
-      });
-      btn.addEventListener('mouseup', () => {
-        multiHoldActive.delete(id);
-      });
-      btn.addEventListener('touchstart', () => {
-        multiHoldActive.add(id);
-        checkMultiHold();
-      });
-      btn.addEventListener('touchend', () => {
-        multiHoldActive.delete(id);
-      });
-    });
-
-    function checkMultiHold() {
-      const step = sequence[currentStep];
-      if (step.type === 'multiHold') {
-        const required = ['btn1', 'btn3'];
-        const held = [...multiHoldActive];
-        if (required.every(id => held.includes(id))) {
-          correctSound.play();
-          advanceStep();
-        }
-      }
-    }
-
-    // 5. Drag
-    const dragCircle = document.getElementById('dragCircle');
-    const targets = document.querySelectorAll('.target');
-
-   
+        multiHoldActive.add
