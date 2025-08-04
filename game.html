@@ -92,7 +92,7 @@
 
       for (let i = 0; i < playerProgress.length; i++) {
         if (playerProgress[i] !== sequence[i]) {
-          incorrectSound.play();
+          playSound(incorrectSound);
           status.textContent = '❌ Incorrect! Try again.';
           playerProgress = [];
           currentStep = 0;
@@ -100,7 +100,7 @@
         }
       }
 
-      correctSound.play();
+      playSound(correctSound);
 
       if (playerProgress.length === currentStep + 1) {
         currentStep++;
