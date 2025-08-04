@@ -53,7 +53,7 @@
 <body>
   <h2>Alien Memory Challenge</h2>
   <p><strong>Solution 1:</strong> [2, 4, 1, 3, 2, 1, 4, 3, 2, 1]</p>
-  <p id="sequenceDisplay"></p>
+  <p id="sequenceDisplay">Repeat the sequence step-by-step.</p>
 
   <div class="button-grid">
     <button class="game-button" onclick="handleInput(1)">1</button>
@@ -64,25 +64,32 @@
 
   <div id="status"></div>
 
+  <!-- 🔊 Sound Effects -->
+  <audio id="correctSound" src="correct.mp3"></audio>
+  <audio id="incorrectSound" src="incorrect.mp3"></audio>
+
   <script>
     const sequence = [2, 4, 1, 3, 2, 1, 4, 3, 2, 1]; // 🔒 Fixed Solution 1
     let currentStep = 0;
     let playerProgress = [];
 
-    document.getElementById('sequenceDisplay').textContent =
-      `Repeat the sequence step-by-step.`;
-
     function handleInput(num) {
+      const correctSound = document.getElementById('correctSound');
+      const incorrectSound = document.getElementById('incorrectSound');
+
       playerProgress.push(num);
 
       for (let i = 0; i < playerProgress.length; i++) {
         if (playerProgress[i] !== sequence[i]) {
+          incorrectSound.play();
           document.getElementById('status').textContent = '❌ Incorrect! Try again.';
           playerProgress = [];
           currentStep = 0;
           return;
         }
       }
+
+      correctSound.play();
 
       if (playerProgress.length === currentStep + 1) {
         currentStep++;
