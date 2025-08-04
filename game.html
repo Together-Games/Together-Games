@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Alien Memory Challenge - v0.3</title>
+  <title>Alien Memory Challenge - v0.4</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -146,37 +146,34 @@
       }
     }
 
-    // ✅ Tap instantly with click
+    // ✅ Tap vs Hold logic
     document.querySelectorAll('.game-button').forEach(button => {
       const num = button.getAttribute('data-num');
+      let holdTimer;
+      let held = false;
 
-      button.addEventListener('click', () => {
-        validateProgress(parseInt(num));
-      });
-
-      // ✅ Hold detection
-      let pressStart;
-      button.addEventListener('mousedown', () => {
-        pressStart = Date.now();
-      });
-
-      button.addEventListener('mouseup', () => {
-        const duration = Date.now() - pressStart;
-        if (duration >= 2000) {
+      const startHold = () => {
+        held = false;
+        holdTimer = setTimeout(() => {
+          held = true;
           validateProgress(`H${num}`);
-        }
-      });
+        }, 2000); // 2 seconds for hold
+      };
 
-      button.addEventListener('touchstart', () => {
-        pressStart = Date.now();
-      });
-
-      button.addEventListener('touchend', () => {
-        const duration = Date.now() - pressStart;
-        if (duration >= 2000) {
-          validateProgress(`H${num}`);
+      const endHold = () => {
+        clearTimeout(holdTimer);
+        if (!held) {
+          validateProgress(parseInt(num)); // Tap
         }
-      });
+      };
+
+      // Mouse events
+      button.addEventListener('mousedown', startHold);
+      button.addEventListener('mouseup', endHold);
+
+      // Touch events
+      button.addEventListener('touchstart', startHold);
+      button.addEventListener('touchend', endHold);
     });
 
     // 🎙️ Voice Recognition
@@ -238,7 +235,7 @@
   </script>
 
   <footer>
-    Version 0.3
+    Version 0.4
   </footer>
 </body>
 </html>
