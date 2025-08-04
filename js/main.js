@@ -43,7 +43,6 @@ const actionMapping = [
 ];
 
 // DOM Elements
-const startButton = document.getElementById('start-btn');
 const statusText = document.getElementById('game-status');
 const scoreText = document.getElementById('score');
 const messageBox = document.getElementById('message-box');
@@ -92,13 +91,15 @@ const resetGame = () => {
     playerSequence = [];
     isPlayerTurn = false;
     isAnimating = false;
-    startButton.disabled = false;
-    startButton.textContent = 'Start Game';
+    // We will no longer set button state, as there is no button.
     statusText.textContent = 'Press Start to Play';
     scoreText.textContent = 'Round: 0';
     // Use direct style manipulation to hide the sequence, but we will not hide it anymore.
     // sequenceDisplay.style.display = 'none';
     sequenceList.innerHTML = '';
+    
+    // Restart the game automatically after reset
+    startGame();
 };
 
 // Function to generate a fixed test sequence
@@ -199,15 +200,14 @@ const checkInput = () => {
     }
 };
 
-// Start Button Event Listener
-startButton.addEventListener('click', async () => {
-    // Before starting, ensure Tone.js is ready for audio playback.
+// Main function to start the game
+const startGame = async () => {
     await Tone.start();
-    startButton.disabled = true;
-    startButton.textContent = 'Game in Progress...';
+    statusText.textContent = 'Game in Progress...';
     generateSequence();
     playSequence();
-});
+};
+
 
 // Initialize all the action listeners
 initializeTapListener(recordPlayerInput);
@@ -215,3 +215,6 @@ initializeHoldListener(recordPlayerInput);
 initializeSpeakListener(recordPlayerInput, showMessage);
 initializeTapMultipleListener(recordPlayerInput);
 initializeDragListener(recordPlayerInput);
+
+// Start the game automatically when the page loads
+startGame();
