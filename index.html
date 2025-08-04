@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Gesture Game</title>
+  <title>Gesture Sequence Game</title>
   <style>
     body {
       font-family: sans-serif;
@@ -76,11 +76,17 @@
     .bottom { bottom: 0; left: 75px; }
     .left   { top: 75px; left: 0; }
     .right  { top: 75px; right: 0; }
+
+    #progress {
+      margin-top: 20px;
+      font-size: 18px;
+      color: #0ff;
+    }
   </style>
 </head>
 <body>
 
-  <h2>Gesture Game</h2>
+  <h2>Gesture Sequence Game</h2>
 
   <!-- Buttons 1–4 -->
   <div class="button-grid">
@@ -95,55 +101,50 @@
 
   <!-- Drag Zone -->
   <div class="drag-zone">
-    <div class="drag-target top" data-zone="top"></div>
-    <div class="drag-target bottom" data-zone="bottom"></div>
+    <div class="drag-target top" data-zone="up"></div>
+    <div class="drag-target bottom" data-zone="down"></div>
     <div class="drag-target left" data-zone="left"></div>
     <div class="drag-target right" data-zone="right"></div>
     <div class="center-circle" id="draggable"></div>
   </div>
 
+  <!-- Progress Display -->
+  <div id="progress">Progress: 0 / 4</div>
+
   <script>
-    // Tap, Hold, Tap Multiple
-    const buttons = ["btn1", "btn2", "btn3", "btn4"];
-    buttons.forEach(id => {
-      const btn = document.getElementById(id);
+    const sequence = ["tap-1", "speak-simon", "drag-up", "tap-3"];
+    let currentStep = 0;
 
-      // Tap
-      btn.addEventListener("touchstart", () => {
-        console.log(`Tap on button ${id}`);
-      });
+    const progressDisplay = document.getElementById("progress");
+    function updateProgress() {
+      progressDisplay.textContent = `Progress: ${currentStep} / ${sequence.length}`;
+    }
 
-      // Hold
-      let holdTimer;
-      btn.addEventListener("touchstart", () => {
-        holdTimer = setTimeout(() => {
-          console.log(`Hold on button ${id}`);
-        }, 1000);
-      });
-
-      btn.addEventListener("touchend", () => {
-        clearTimeout(holdTimer);
-      });
-
-      // Tap Multiple
-      let tapCount = 0;
-      let lastTap = Date.now();
-      btn.addEventListener("touchstart", () => {
-        const now = Date.now();
-        if (now - lastTap < 500) {
-          tapCount++;
-          if (tapCount >= 3) {
-            console.log(`Tap Multiple on button ${id}`);
-            tapCount = 0;
-          }
-        } else {
-          tapCount = 1;
+    function checkAction(action) {
+      if (action === sequence[currentStep]) {
+        currentStep++;
+        updateProgress();
+        if (currentStep === sequence.length) {
+          alert("🎉 Sequence complete!");
+          currentStep = 0;
+          updateProgress();
         }
-        lastTap = now;
+      } else {
+        alert("❌ Wrong action. Try again.");
+        currentStep = 0;
+        updateProgress();
+      }
+    }
+
+    // Tap detection
+    ["btn1", "btn2", "btn3", "btn4"].forEach(id => {
+      const btn = document.getElementById(id);
+      btn.addEventListener("touchstart", () => {
+        checkAction(`tap-${id.slice(-1)}`);
       });
     });
 
-    // Speak
+    // Speak detection
     document.getElementById("speak-button").addEventListener("click", () => {
       const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
       recognition.lang = "en-US";
@@ -153,7 +154,9 @@
         const transcript = event.results[0][0].transcript.toLowerCase();
         console.log("You said:", transcript);
         if (transcript.includes("simon")) {
-          console.log("Speak action detected");
+          checkAction("speak-simon");
+        } else {
+          alert("❌ Wrong word. Try again.");
         }
       };
 
@@ -162,7 +165,7 @@
       };
     });
 
-    // Drag
+    // Drag detection
     const draggable = document.getElementById("draggable");
     let offsetX, offsetY;
 
@@ -180,7 +183,6 @@
       draggable.style.left = `${x}px`;
       draggable.style.top = `${y}px`;
 
-      // Check if overlapping a target
       document.querySelectorAll(".drag-target").forEach(target => {
         const rect1 = draggable.getBoundingClientRect();
         const rect2 = target.getBoundingClientRect();
@@ -189,10 +191,12 @@
                           rect1.bottom < rect2.top || 
                           rect1.top > rect2.bottom);
         if (overlap) {
-          console.log(`Dragged into ${target.dataset.zone}`);
+          checkAction(`drag-${target.dataset.zone}`);
         }
       });
     });
+
+    updateProgress();
   </script>
 </body>
 </html>
