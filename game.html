@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Alien Memory Challenge - Voice & Hold Enabled</title>
+  <title>Alien Memory Challenge - v0.3</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -88,7 +88,6 @@
   <button id="micButton">🎙️ Hold to Speak</button>
   <div id="status"></div>
 
-  <!-- 🔊 Sound Effects -->
   <audio id="correctSound" src="correct.mp3" preload="auto"></audio>
   <audio id="incorrectSound" src="incorrect.mp3" preload="auto"></audio>
 
@@ -104,15 +103,9 @@
 
     function playSound(sound) {
       if (sound) {
-        try {
-          sound.pause();
-          sound.currentTime = 0;
-          sound.play().catch(err => {
-            console.warn("Sound play blocked:", err);
-          });
-        } catch (e) {
-          console.error("Sound error:", e);
-        }
+        sound.pause();
+        sound.currentTime = 0;
+        sound.play().catch(err => console.warn("Sound play blocked:", err));
       }
     }
 
@@ -123,10 +116,23 @@
         .join('\n');
     }
 
-    function validateInput(input) {
-      const expected = sequence[currentStep];
-      if (input === expected) {
-        playSound(correctSound);
+    function validateProgress(input) {
+      playerProgress.push(input);
+
+      for (let i = 0; i < playerProgress.length; i++) {
+        if (playerProgress[i] !== sequence[i]) {
+          playSound(incorrectSound);
+          status.textContent = '❌ Incorrect! Try again.';
+          currentStep = 0;
+          playerProgress = [];
+          updateSequenceDisplay();
+          return;
+        }
+      }
+
+      playSound(correctSound);
+
+      if (playerProgress.length === currentStep + 1) {
         currentStep++;
         playerProgress = [];
 
@@ -137,45 +143,43 @@
         }
 
         updateSequenceDisplay();
-      } else {
-        playSound(incorrectSound);
-        status.textContent = '❌ Incorrect! Try again.';
-        currentStep = 0;
-        playerProgress = [];
-        updateSequenceDisplay();
       }
     }
 
-    // 🖱️ Button Hold Detection
+    // ✅ Tap instantly with click
     document.querySelectorAll('.game-button').forEach(button => {
-      let pressTimer;
-      let pressStart;
+      const num = button.getAttribute('data-num');
 
+      button.addEventListener('click', () => {
+        validateProgress(parseInt(num));
+      });
+
+      // ✅ Hold detection
+      let pressStart;
       button.addEventListener('mousedown', () => {
         pressStart = Date.now();
       });
 
       button.addEventListener('mouseup', () => {
         const duration = Date.now() - pressStart;
-        const num = button.getAttribute('data-num');
-        const input = duration >= 2000 ? `H${num}` : parseInt(num);
-        validateInput(input);
+        if (duration >= 2000) {
+          validateProgress(`H${num}`);
+        }
       });
 
-      // Touch support
       button.addEventListener('touchstart', () => {
         pressStart = Date.now();
       });
 
       button.addEventListener('touchend', () => {
         const duration = Date.now() - pressStart;
-        const num = button.getAttribute('data-num');
-        const input = duration >= 2000 ? `H${num}` : parseInt(num);
-        validateInput(input);
+        if (duration >= 2000) {
+          validateProgress(`H${num}`);
+        }
       });
     });
 
-    // 🎙️ Voice Recognition Setup
+    // 🎙️ Voice Recognition
     const micButton = document.getElementById('micButton');
     let recognition;
 
@@ -191,7 +195,7 @@
         console.log("Heard:", transcript);
 
         if (transcript === 'zorgon') {
-          validateInput("Zorgon");
+          validateProgress("Zorgon");
         } else {
           playSound(incorrectSound);
           status.textContent = '❌ Wrong word! Try again.';
@@ -210,7 +214,6 @@
       micButton.textContent = '🎙️ Voice not supported';
     }
 
-    // 🎙️ Press and Hold Behavior
     micButton.addEventListener('touchstart', () => {
       if (recognition) recognition.start();
       status.textContent = '🎧 Listening... Say "Zorgon"';
@@ -231,12 +234,11 @@
       status.textContent = '🎙️ Stopped listening.';
     });
 
-    // 🧠 Initialize display
     updateSequenceDisplay();
   </script>
 
   <footer>
-    Version 0.2
+    Version 0.3
   </footer>
 </body>
 </html>
