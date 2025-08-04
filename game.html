@@ -1,212 +1,114 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Alien Memory Challenge - Voice Enabled</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="version" content="0.2">
+  <title>Italian Flashcards</title>
   <style>
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #0b0c10;
-      color: #c5c6c7;
-      text-align: center;
-      padding: 40px;
-    }
-
-    .button-grid {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 20px;
       display: flex;
-      justify-content: center;
-      gap: 20px;
-      margin-top: 30px;
+      flex-direction: column;
+      align-items: center;
     }
 
-    .game-button {
-      width: 80px;
-      height: 80px;
-      font-size: 24px;
+    .flashcard {
+      background-color: #fff;
+      border: 2px solid #ccc;
       border-radius: 10px;
-      border: none;
-      background-color: #45a29e;
-      color: white;
-      cursor: pointer;
-      transition: transform 0.1s;
-      user-select: none;
-      -webkit-user-select: none;
+      padding: 20px;
+      margin: 10px;
+      font-size: 1.5em;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      text-align: center;
+      width: 300px;
     }
 
-    .game-button:active {
-      transform: scale(0.95);
-      background-color: #66fcf1;
+    input {
+      padding: 10px;
+      font-size: 1em;
+      margin-top: 10px;
+      width: 300px;
     }
 
-    #micButton {
-      margin-top: 30px;
-      padding: 15px 30px;
-      font-size: 18px;
-      border-radius: 10px;
-      background-color: #1f2833;
-      color: #66fcf1;
-      border: 2px solid #66fcf1;
-      cursor: pointer;
-      user-select: none;
-      -webkit-user-select: none;
+    button {
+      padding: 10px 20px;
+      font-size: 1em;
+      margin-top: 10px;
     }
 
-    #status {
-      margin-top: 20px;
-      font-size: 24px;
-      color: #c5c6c7;
-    }
-
-    #sequenceDisplay {
-      margin-top: 20px;
-      font-size: 16px;
-      color: #66fcf1;
-      white-space: pre-wrap;
+    footer {
+      margin-top: auto;
+      padding: 10px;
+      font-size: 0.9em;
+      color: #666;
     }
   </style>
 </head>
 <body>
-  <h2>Alien Memory Challenge</h2>
-  <p><strong>Solution 1:</strong></p>
-  <div id="sequenceDisplay"></div>
-  <p id="instruction">Repeat the sequence step-by-step.</p>
 
-  <div class="button-grid">
-    <button class="game-button" onclick="handleInput(1)">1</button>
-    <button class="game-button" onclick="handleInput(2)">2</button>
-    <button class="game-button" onclick="handleInput(3)">3</button>
-    <button class="game-button" onclick="handleInput(4)">4</button>
-  </div>
+  <!-- Italian Flashcard App - Version 0.2 -->
+  <h1>Translate the Sequence</h1>
 
-  <button id="micButton">🎙️ Hold to Speak</button>
-  <div id="status"></div>
+  <div id="flashcards"></div>
 
-  <!-- 🔊 Sound Effects -->
-  <audio id="correctSound" src="correct.mp3" preload="auto"></audio>
-  <audio id="incorrectSound" src="incorrect.mp3" preload="auto"></audio>
+  <input type="text" id="answer" placeholder="Type your answer here">
+  <button onclick="submitAnswer()">Submit</button>
 
-  <script>
-    const sequence = [2, 4, 1, 3, 2, 1, 4, 3, 2, 1];
-    let currentStep = 0;
-    let playerProgress = [];
-
-    const correctSound = document.getElementById('correctSound');
-    const incorrectSound = document.getElementById('incorrectSound');
-    const status = document.getElementById('status');
-    const sequenceDisplay = document.getElementById('sequenceDisplay');
-
-    // 🧠 Show full sequence visually
-    sequenceDisplay.textContent = sequence.map((num, i) => `${i + 1}. ${num}`).join('\n');
-
-    function playSound(sound) {
-      if (sound) {
-        try {
-          sound.pause();
-          sound.currentTime = 0;
-          sound.play().catch(err => {
-            console.warn("Sound play blocked:", err);
-          });
-        } catch (e) {
-          console.error("Sound error:", e);
-        }
-      }
-    }
-
-    function handleInput(num) {
-      playerProgress.push(num);
-
-      for (let i = 0; i < playerProgress.length; i++) {
-        if (playerProgress[i] !== sequence[i]) {
-          playSound(incorrectSound);
-          status.textContent = '❌ Incorrect! Try again.';
-          playerProgress = [];
-          currentStep = 0;
-          return;
-        }
-      }
-
-      playSound(correctSound);
-
-      if (playerProgress.length === currentStep + 1) {
-        currentStep++;
-        playerProgress = [];
-
-        if (currentStep === sequence.length) {
-          status.textContent = '🎉 You Win!';
-        } else {
-          status.textContent = `✅ Good! Now repeat ${currentStep + 1} steps.`;
-        }
-      }
-    }
-
-    // 🎙️ Voice Recognition Setup
-    const micButton = document.getElementById('micButton');
-    let recognition;
-
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
-
-      recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript.trim().toLowerCase();
-        console.log("Heard:", transcript);
-
-        if (transcript === 'zorgon') {
-          playSound(correctSound);
-          currentStep++;
-          playerProgress = [];
-
-          if (currentStep === sequence.length) {
-            status.textContent = '🎉 You Win!';
-          } else {
-            status.textContent = `✅ Voice accepted! Now repeat ${currentStep + 1} steps.`;
-          }
-        } else {
-          playSound(incorrectSound);
-          status.textContent = '❌ Wrong word! Try again.';
-          currentStep = 0;
-          playerProgress = [];
-        }
-      };
-
-      recognition.onerror = (e) => {
-        console.warn("Speech error:", e.error);
-        status.textContent = '⚠️ Voice error. Try again.';
-      };
-    } else {
-      micButton.disabled = true;
-      micButton.textContent = '🎙️ Voice not supported';
-    }
-
-    // 🎙️ Press and Hold Behavior
-    micButton.addEventListener('touchstart', () => {
-      if (recognition) recognition.start();
-      status.textContent = '🎧 Listening... Say "Zorgon"';
-    });
-
-    micButton.addEventListener('touchend', () => {
-      if (recognition) recognition.stop();
-      status.textContent = '🎙️ Stopped listening.';
-    });
-
-    micButton.addEventListener('mousedown', () => {
-      if (recognition) recognition.start();
-      status.textContent = '🎧 Listening... Say "Zorgon"';
-    });
-
-    micButton.addEventListener('mouseup', () => {
-      if (recognition) recognition.stop();
-      status.textContent = '🎙️ Stopped listening.';
-    });
-  </script>
-
-    <footer>
+  <footer>
     Version 0.2
   </footer>
+
+  <script>
+    const sequence = [
+      { italian: "Ciao", english: "hello" },
+      { italian: "Grazie", english: "thank you" },
+      { italian: "Arrivederci", english: "goodbye" }
+    ];
+
+    let currentStep = 0;
+
+    function renderFlashcards() {
+      const container = document.getElementById("flashcards");
+      container.innerHTML = "";
+      for (let i = 0; i <= currentStep; i++) {
+        const card = document.createElement("div");
+        card.className = "flashcard";
+        card.innerText = sequence[i].italian;
+        container.appendChild(card);
+      }
+    }
+
+    function submitAnswer() {
+      const input = document.getElementById("answer");
+      const userAnswer = input.value.trim().toLowerCase();
+      const correctAnswer = sequence[currentStep].english.toLowerCase();
+
+      if (userAnswer === correctAnswer) {
+        currentStep++;
+        input.value = "";
+        if (currentStep < sequence.length) {
+          renderFlashcards();
+        } else {
+          alert("🎉 Sequence complete!");
+          currentStep = 0;
+          renderFlashcards();
+        }
+      } else {
+        alert("❌ Incorrect! Starting over.");
+        currentStep = 0;
+        input.value = "";
+        renderFlashcards();
+      }
+    }
+
+    // Initialize
+    renderFlashcards();
+  </script>
 
 </body>
 </html>
