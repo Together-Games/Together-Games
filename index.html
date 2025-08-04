@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simon Says - Action Challenge</title>
+    <!-- Tone.js for sound effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Inter Font -->
@@ -35,7 +37,7 @@
 
         <!-- Score & Status Display -->
         <div class="w-full flex justify-between items-center text-lg font-semibold">
-            <span id="game-status" class="text-gray-400">Press Start to Play</span>
+            <span id="game-status" class="text-gray-400">Loading...</span>
             <span id="score" class="text-sky-300">Round: 0</span>
         </div>
 
@@ -80,9 +82,6 @@
                 <div id="drag-circle" class="absolute w-12 h-12 bg-sky-500 rounded-full shadow-lg cursor-grab active:cursor-grabbing transform transition-all duration-100"></div>
             </div>
         </div>
-
-        <!-- Start Button -->
-        <button id="start-btn" class="w-full mt-8 py-4 px-6 bg-green-500 hover:bg-green-600 text-white font-bold text-xl rounded-xl shadow-lg transition-colors duration-200 active:scale-95">Start Game</button>
     </div>
 
     <!-- The game logic is split into separate files and imported as modules. -->
