@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Alien Memory Challenge</title>
+  <title>Alien Memory Challenge - Solution 1</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -18,7 +18,6 @@
       justify-content: center;
       gap: 20px;
       margin-top: 30px;
-      flex-wrap: wrap;
     }
 
     .game-button {
@@ -30,213 +29,80 @@
       background-color: #45a29e;
       color: white;
       cursor: pointer;
-      user-select: none;
-      -webkit-user-select: none;
+      transition: transform 0.1s;
     }
 
-    #micButton {
-      margin-top: 30px;
-      padding: 15px 30px;
-      font-size: 18px;
-      border-radius: 10px;
-      background-color: #1f2833;
-      color: #66fcf1;
-      border: 2px solid #66fcf1;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    #dragZone {
-      margin: 30px auto;
-      width: 200px;
-      height: 200px;
-      position: relative;
-      border: 2px dashed #66fcf1;
-    }
-
-    .target {
-      position: absolute;
-      width: 50px;
-      height: 50px;
-      background-color: #45a29e;
-      border-radius: 50%;
-    }
-
-    #dragCircle {
-      position: absolute;
-      width: 50px;
-      height: 50px;
+    .game-button:active {
+      transform: scale(0.95);
       background-color: #66fcf1;
-      border-radius: 50%;
-      top: 75px;
-      left: 75px;
-      cursor: grab;
+    }
+
+    #sequenceDisplay {
+      margin-top: 20px;
+      font-size: 18px;
+      color: #66fcf1;
     }
 
     #status {
       margin-top: 20px;
       font-size: 24px;
-    }
-
-    #sequenceDisplay {
-      margin-top: 20px;
-      font-size: 16px;
-      color: #66fcf1;
-      white-space: pre-wrap;
+      color: #c5c6c7;
     }
   </style>
 </head>
 <body>
   <h2>Alien Memory Challenge</h2>
-  <div id="sequenceDisplay"></div>
+  <p><strong>Solution 1:</strong> [2, 4, 1, 3, 2, 1, 4, 3, 2, 1]</p>
+  <p id="sequenceDisplay">Repeat the sequence step-by-step.</p>
 
   <div class="button-grid">
-    <button class="game-button" id="btn1">1</button>
-    <button class="game-button" id="btn2">2</button>
-    <button class="game-button" id="btn3">3</button>
-    <button class="game-button" id="btn4">4</button>
-    <button class="game-button" id="holdButton">Hold</button>
-  </div>
-
-  <button id="micButton">🎙️ Hold to Speak</button>
-
-  <div id="dragZone">
-    <div id="dragCircle" draggable="true"></div>
-    <div class="target" style="top: 0; left: 75px;" data-dir="up"></div>
-    <div class="target" style="top: 150px; left: 75px;" data-dir="down"></div>
-    <div class="target" style="top: 75px; left: 0;" data-dir="left"></div>
-    <div class="target" style="top: 75px; left: 150px;" data-dir="right"></div>
+    <button class="game-button" onclick="handleInput(1)">1</button>
+    <button class="game-button" onclick="handleInput(2)">2</button>
+    <button class="game-button" onclick="handleInput(3)">3</button>
+    <button class="game-button" onclick="handleInput(4)">4</button>
   </div>
 
   <div id="status"></div>
 
-  <audio id="correctSound" src="correct.mp3" preload="auto"></audio>
-  <audio id="incorrectSound" src="incorrect.mp3" preload="auto"></audio>
+  <!-- 🔊 Sound Effects -->
+  <audio id="correctSound" src="correct.mp3"></audio>
+  <audio id="incorrectSound" src="incorrect.mp3"></audio>
 
   <script>
-    const sequence = [
-      { type: 'tap', value: 2 },
-      { type: 'voice', value: 'zorgon' },
-      { type: 'hold', value: true },
-      { type: 'multiHold', value: [1, 3] },
-      { type: 'drag', value: 'up' },
-      { type: 'tap', value: 4 },
-      { type: 'voice', value: 'zorgon' },
-      { type: 'drag', value: 'left' },
-      { type: 'multiHold', value: [1, 3] },
-      { type: 'hold', value: true }
-    ];
-
+    const sequence = [2, 4, 1, 3, 2, 1, 4, 3, 2, 1]; // 🔒 Fixed Solution 1
     let currentStep = 0;
-    let inputBuffer = [];
-    let multiHoldSet = new Set();
+    let playerProgress = [];
 
-    const status = document.getElementById('status');
-    const sequenceDisplay = document.getElementById('sequenceDisplay');
-    const correctSound = document.getElementById('correctSound');
-    const incorrectSound = document.getElementById('incorrectSound');
+    function handleInput(num) {
+      const correctSound = document.getElementById('correctSound');
+      const incorrectSound = document.getElementById('incorrectSound');
 
-    sequenceDisplay.textContent = sequence.map((s, i) => `${i + 1}. ${s.type} → ${JSON.stringify(s.value)}`).join('\n');
+      playerProgress.push(num);
 
-    function checkSequence() {
-      const expected = sequence.slice(0, inputBuffer.length);
-      const match = expected.every((step, i) => {
-        const input = inputBuffer[i];
-        if (!input || input.type !== step.type) return false;
-        if (step.type === 'multiHold') {
-          return step.value.every(v => input.value.includes(v));
+      for (let i = 0; i < playerProgress.length; i++) {
+        if (playerProgress[i] !== sequence[i]) {
+          incorrectSound.play();
+          document.getElementById('status').textContent = '❌ Incorrect! Try again.';
+          playerProgress = [];
+          currentStep = 0;
+          return;
         }
-        return JSON.stringify(step.value) === JSON.stringify(input.value);
-      });
+      }
 
-      if (match && inputBuffer.length === currentStep + 1) {
-        correctSound.play();
+      correctSound.play();
+
+      if (playerProgress.length === currentStep + 1) {
         currentStep++;
-        inputBuffer = [];
+        playerProgress = [];
+
         if (currentStep === sequence.length) {
-          status.textContent = '🎉 You Win!';
+          document.getElementById('status').textContent = '🎉 You Win!';
         } else {
-          status.textContent = `✅ Step ${currentStep} complete. Repeat sequence.`;
-        }
-      } else if (!match) {
-        incorrectSound.play();
-        status.textContent = '❌ Incorrect! Start over.';
-        currentStep = 0;
-        inputBuffer = [];
-      }
-    }
-
-    function addInput(type, value) {
-      inputBuffer.push({ type, value });
-      checkSequence();
-    }
-
-    ['btn1', 'btn2', 'btn3', 'btn4'].forEach(id => {
-      const num = parseInt(id.replace('btn', ''));
-      const btn = document.getElementById(id);
-
-      btn.addEventListener('click', () => addInput('tap', num));
-
-      btn.addEventListener('mousedown', () => {
-        multiHoldSet.add(num);
-        checkMultiHold();
-      });
-
-      btn.addEventListener('mouseup', () => multiHoldSet.delete(num));
-    });
-
-    function checkMultiHold() {
-      const required = new Set(sequence[currentStep]?.value || []);
-      if (sequence[currentStep]?.type === 'multiHold') {
-        if (required.size === multiHoldSet.size && [...required].every(v => multiHoldSet.has(v))) {
-          addInput('multiHold', [...multiHoldSet]);
+          document.getElementById('status').textContent =
+            `✅ Good! Now repeat ${currentStep + 1} steps.`;
         }
       }
     }
-
-    // Hold button
-    let holdTimer;
-    const holdButton = document.getElementById('holdButton');
-    holdButton.addEventListener('mousedown', () => {
-      holdTimer = setTimeout(() => addInput('hold', true), 2000);
-    });
-    holdButton.addEventListener('mouseup', () => clearTimeout(holdTimer));
-
-    // Voice
-    const micButton = document.getElementById('micButton');
-    let recognition;
-
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
-
-      recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript.trim().toLowerCase();
-        addInput('voice', transcript);
-      };
-
-      recognition.onerror = () => {
-        incorrectSound.play();
-        status.textContent = '❌ Mic error.';
-      };
-    }
-
-    function startMic() {
-      if (recognition) recognition.start();
-      status.textContent = '🎧 Listening...';
-    }
-
-    function stopMic() {
-      if (recognition) recognition.stop();
-      status.textContent = '🎙️ Stopped listening.';
-    }
-
-    micButton.addEventListener('mousedown', startMic);
-    micButton.addEventListener('mouseup', stopMic);
-    micButton.addEventListener('touchstart', startMic);
-    micButton.addEventListener('touchend', stopMic);
-
-   
+  </script>
+</body>
+</html>
