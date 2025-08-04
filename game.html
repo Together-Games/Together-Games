@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Alien Memory Challenge - Solution 1</title>
+  <title>Alien Memory Challenge - Voice Enabled</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -37,10 +37,15 @@
       background-color: #66fcf1;
     }
 
-    #sequenceDisplay {
-      margin-top: 20px;
+    #micButton {
+      margin-top: 30px;
+      padding: 15px 30px;
       font-size: 18px;
+      border-radius: 10px;
+      background-color: #1f2833;
       color: #66fcf1;
+      border: 2px solid #66fcf1;
+      cursor: pointer;
     }
 
     #status {
@@ -62,27 +67,29 @@
     <button class="game-button" onclick="handleInput(4)">4</button>
   </div>
 
+  <button id="micButton">🎙️ Hold to Speak</button>
   <div id="status"></div>
 
-  <!-- 🔊 Sound Effects with preload fix -->
+  <!-- 🔊 Sound Effects -->
   <audio id="correctSound" src="correct.mp3" preload="auto"></audio>
   <audio id="incorrectSound" src="incorrect.mp3" preload="auto"></audio>
 
   <script>
-    const sequence = [2, 4, 1, 3, 2, 1, 4, 3, 2, 1]; // 🔒 Fixed Solution 1
+    const sequence = [2, 4, 1, 3, 2, 1, 4, 3, 2, 1];
     let currentStep = 0;
     let playerProgress = [];
 
-    function handleInput(num) {
-      const correctSound = document.getElementById('correctSound');
-      const incorrectSound = document.getElementById('incorrectSound');
+    const correctSound = document.getElementById('correctSound');
+    const incorrectSound = document.getElementById('incorrectSound');
+    const status = document.getElementById('status');
 
+    function handleInput(num) {
       playerProgress.push(num);
 
       for (let i = 0; i < playerProgress.length; i++) {
         if (playerProgress[i] !== sequence[i]) {
           incorrectSound.play();
-          document.getElementById('status').textContent = '❌ Incorrect! Try again.';
+          status.textContent = '❌ Incorrect! Try again.';
           playerProgress = [];
           currentStep = 0;
           return;
@@ -96,13 +103,76 @@
         playerProgress = [];
 
         if (currentStep === sequence.length) {
-          document.getElementById('status').textContent = '🎉 You Win!';
+          status.textContent = '🎉 You Win!';
         } else {
-          document.getElementById('status').textContent =
-            `✅ Good! Now repeat ${currentStep + 1} steps.`;
+          status.textContent = `✅ Good! Now repeat ${currentStep + 1} steps.`;
         }
       }
     }
+
+    // 🎙️ Voice Recognition Setup
+    const micButton = document.getElementById('micButton');
+    let recognition;
+
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript.trim().toLowerCase();
+        console.log("Heard:", transcript);
+
+        if (transcript === 'zorgon') {
+          correctSound.play();
+          currentStep++;
+          playerProgress = [];
+
+          if (currentStep === sequence.length) {
+            status.textContent = '🎉 You Win!';
+          } else {
+            status.textContent = `✅ Voice accepted! Now repeat ${currentStep + 1} steps.`;
+          }
+        } else {
+          incorrectSound.play();
+          status.textContent = '❌ Wrong word! Try again.';
+          currentStep = 0;
+          playerProgress = [];
+        }
+      };
+
+      recognition.onerror = (e) => {
+        console.warn("Speech error:", e.error);
+        status.textContent = '⚠️ Voice error. Try again.';
+      };
+    } else {
+      micButton.disabled = true;
+      micButton.textContent = '🎙️ Voice not supported';
+    }
+
+    // 🎙️ Press and Hold Behavior
+    micButton.addEventListener('touchstart', () => {
+      if (recognition) recognition.start();
+      status.textContent = '🎧 Listening... Say "Zorgon"';
+    });
+
+    micButton.addEventListener('touchend', () => {
+      if (recognition) recognition.stop();
+      status.textContent = '🎙️ Stopped listening.';
+    });
+
+    // Also support mouse for desktop
+    micButton.addEventListener('mousedown', () => {
+      if (recognition) recognition.start();
+      status.textContent = '🎧 Listening... Say "Zorgon"';
+    });
+
+    micButton.addEventListener('mouseup', () => {
+      if (recognition) recognition.stop();
+      status.textContent = '🎙️ Stopped listening.';
+    });
   </script>
 </body>
 </html>
