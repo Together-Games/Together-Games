@@ -1,21 +1,99 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Alien Game</title>
   <link rel="stylesheet" href="style.css" />
+  <style>
+    .button-grid {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 30px;
+    }
+
+    .game-button {
+      width: 80px;
+      height: 80px;
+      font-size: 24px;
+      border-radius: 10px;
+      border: none;
+      background-color: #45a29e;
+      color: white;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    .game-button:active {
+      transform: scale(0.95);
+      background-color: #66fcf1;
+    }
+
+    #sequenceDisplay {
+      margin-top: 20px;
+      font-size: 18px;
+      color: #66fcf1;
+    }
+
+    #status {
+      margin-top: 20px;
+      font-size: 24px;
+      color: #c5c6c7;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
-    <h2>Welcome to the Alien Game!</h2>
-    <p id="solutionDisplay"></p>
+    <h2>Alien Memory Challenge</h2>
+    <p id="sequenceDisplay"></p>
+    <div class="button-grid">
+      <button class="game-button" onclick="handleInput(1)">1</button>
+      <button class="game-button" onclick="handleInput(2)">2</button>
+      <button class="game-button" onclick="handleInput(3)">3</button>
+      <button class="game-button" onclick="handleInput(4)">4</button>
+    </div>
+    <div id="status"></div>
   </div>
 
   <script>
-    const solution = localStorage.getItem('solutionNumber');
-    document.getElementById('solutionDisplay').textContent =
-      solution ? `Your solution number is: ${solution}` : 'No solution entered.';
+    const sequenceLength = 10;
+    const sequence = Array.from({ length: sequenceLength }, () =>
+      Math.floor(Math.random() * 4) + 1
+    );
+
+    let currentStep = 0;
+    let playerProgress = [];
+
+    document.getElementById('sequenceDisplay').textContent =
+      `Sequence: ${sequence.join(' ')}`;
+
+    function handleInput(num) {
+      playerProgress.push(num);
+
+      // Check if current input matches the sequence so far
+      for (let i = 0; i < playerProgress.length; i++) {
+        if (playerProgress[i] !== sequence[i]) {
+          document.getElementById('status').textContent = 'Incorrect! Try again.';
+          playerProgress = [];
+          currentStep = 0;
+          return;
+        }
+      }
+
+      // If player completed current step correctly
+      if (playerProgress.length === currentStep + 1) {
+        currentStep++;
+        playerProgress = [];
+
+        if (currentStep === sequenceLength) {
+          document.getElementById('status').textContent = '🎉 You Win!';
+        } else {
+          document.getElementById('status').textContent =
+            `Good! Now repeat ${currentStep + 1} steps.`;
+        }
+      }
+    }
   </script>
 </body>
 </html>
