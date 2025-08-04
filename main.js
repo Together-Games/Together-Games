@@ -78,7 +78,8 @@ const resetGame = () => {
     startButton.textContent = 'Start Game';
     statusText.textContent = 'Press Start to Play';
     scoreText.textContent = 'Round: 0';
-    sequenceDisplay.classList.add('hidden');
+    // Use direct style manipulation to hide the sequence
+    sequenceDisplay.style.display = 'none';
     sequenceList.innerHTML = '';
 };
 
@@ -123,7 +124,8 @@ const displaySequence = () => {
         sequenceList.appendChild(li);
     });
 
-    sequenceDisplay.classList.remove('hidden');
+    // Use direct style manipulation to show the sequence
+    sequenceDisplay.style.display = 'block';
 };
 
 // Function to play the sequence for the user
