@@ -11,6 +11,7 @@ function updateProgress() {
 }
 
 function checkAction(action) {
+  console.log("Detected:", action);
   if (action === sequence[currentStep]) {
     currentStep++;
     updateProgress();
@@ -26,7 +27,6 @@ function checkAction(action) {
   }
 }
 
-// Initialize gesture handlers
 setupTap(["btn1", "btn2", "btn3", "btn4"], checkAction);
 setupSpeak("speak-button", checkAction);
 setupDrag("draggable", checkAction);
