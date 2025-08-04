@@ -91,11 +91,8 @@ const resetGame = () => {
     playerSequence = [];
     isPlayerTurn = false;
     isAnimating = false;
-    // We will no longer set button state, as there is no button.
-    statusText.textContent = 'Press Start to Play';
+    statusText.textContent = 'Initializing game...';
     scoreText.textContent = 'Round: 0';
-    // Use direct style manipulation to hide the sequence, but we will not hide it anymore.
-    // sequenceDisplay.style.display = 'none';
     sequenceList.innerHTML = '';
     
     // Restart the game automatically after reset
@@ -202,6 +199,7 @@ const checkInput = () => {
 
 // Main function to start the game
 const startGame = async () => {
+    // Wait for Tone.js to be ready before generating the sequence and starting the game
     await Tone.start();
     statusText.textContent = 'Game in Progress...';
     generateSequence();
@@ -217,4 +215,4 @@ initializeTapMultipleListener(recordPlayerInput);
 initializeDragListener(recordPlayerInput);
 
 // Start the game automatically when the page loads
-startGame();
+window.onload = startGame;
