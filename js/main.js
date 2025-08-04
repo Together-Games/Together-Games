@@ -11,6 +11,9 @@ import { initializeSpeakListener } from './speak.js';
 import { initializeTapMultipleListener } from './tapMultiple.js';
 import { initializeDragListener } from './drag.js';
 
+// Game version number
+const VERSION = 'v0.2';
+
 // Game state variables
 let gameSequence = [];
 let playerSequence = [];
@@ -45,6 +48,7 @@ const actionMapping = [
 // DOM Elements
 const statusText = document.getElementById('game-status');
 const scoreText = document.getElementById('score');
+const versionText = document.getElementById('game-version');
 const messageBox = document.getElementById('message-box');
 const messageText = document.getElementById('message-text');
 const messageCloseBtn = document.getElementById('message-close-btn');
@@ -207,6 +211,11 @@ const checkInput = () => {
 
 // Main function to start the game
 const startGame = async () => {
+    // Set the version text
+    if (versionText) {
+        versionText.textContent = `Version: ${VERSION}`;
+    }
+    
     // Wait for Tone.js to be ready before generating the sequence and starting the game
     await Tone.start();
     statusText.textContent = 'Game in Progress...';
