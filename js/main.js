@@ -12,7 +12,7 @@ import { initializeTapMultipleListener } from './tapMultiple.js';
 import { initializeDragListener } from './drag.js';
 
 // Game version number
-const VERSION = 'v0.2';
+const VERSION = 'v0.3';
 
 // Game state variables
 let gameSequence = [];
@@ -45,15 +45,16 @@ const actionMapping = [
     { type: ACTIONS.DRAG, id: 'right' },
 ];
 
-// DOM Elements
-const statusText = document.getElementById('game-status');
-const scoreText = document.getElementById('score');
-const versionText = document.getElementById('game-version');
-const messageBox = document.getElementById('message-box');
-const messageText = document.getElementById('message-text');
-const messageCloseBtn = document.getElementById('message-close-btn');
-const sequenceDisplay = document.getElementById('sequence-display');
-const sequenceList = document.getElementById('sequence-list');
+// DOM Elements - These will be accessed inside a function to ensure they exist.
+let statusText;
+let scoreText;
+let versionText;
+let messageBox;
+let messageText;
+let messageCloseBtn;
+let sequenceDisplay;
+let sequenceList;
+
 
 // Tone.js setup for sound effects
 const correctSynth = new Tone.Synth({
@@ -75,18 +76,22 @@ const playIncorrectSound = () => {
 
 // Show a message to the user
 const showMessage = (text) => {
-    messageText.textContent = text;
-    messageBox.style.display = 'block';
+    if (messageText && messageBox) {
+        messageText.textContent = text;
+        messageBox.style.display = 'block';
+    }
 };
 
 // Hide the message box
-messageCloseBtn.addEventListener('click', () => {
-    messageBox.style.display = 'none';
-    // If the game is over, reset it
-    if (statusText.textContent.includes("Game Over")) {
-        resetGame();
+const hideMessage = () => {
+    if (messageBox) {
+        messageBox.style.display = 'none';
+        // If the game is over, reset it
+        if (statusText && statusText.textContent.includes("Game Over")) {
+            resetGame();
+        }
     }
-});
+};
 
 // Function to reset the game state
 const resetGame = () => {
@@ -95,9 +100,9 @@ const resetGame = () => {
     playerSequence = [];
     isPlayerTurn = false;
     isAnimating = false;
-    statusText.textContent = 'Initializing game...';
-    scoreText.textContent = 'Round: 0';
-    sequenceList.innerHTML = '';
+    if (statusText) statusText.textContent = 'Initializing game...';
+    if (scoreText) scoreText.textContent = 'Round: 0';
+    if (sequenceList) sequenceList.innerHTML = '';
     
     // Restart the game automatically after reset
     startGame();
@@ -124,6 +129,7 @@ const generateSequence = () => {
 
 // Function to display the sequence on the screen for the player to see.
 const displaySequence = () => {
+    if (!sequenceList) return;
     sequenceList.innerHTML = '';
     const actionDescriptions = {
         'tap': 'Tap button',
@@ -149,7 +155,7 @@ const displaySequence = () => {
     });
 
     // Ensure the sequence display is visible
-    sequenceDisplay.style.display = 'block';
+    if (sequenceDisplay) sequenceDisplay.style.display = 'block';
 };
 
 // Function to play the sequence for the user - now it just makes it the player's turn
@@ -157,8 +163,8 @@ const playSequence = async () => {
     isAnimating = false; // No animation
     isPlayerTurn = true;
     playerSequence = [];
-    statusText.textContent = 'Your turn!';
-    scoreText.textContent = `Round: 1 / ${gameSequence.length}`;
+    if (statusText) statusText.textContent = 'Your turn!';
+    if (scoreText) scoreText.textContent = `Round: 1 / ${gameSequence.length}`;
 };
 
 // Function called by action modules when player makes an input
@@ -204,32 +210,58 @@ const checkInput = () => {
             showMessage('You Win! You completed all 10 actions correctly.');
             isPlayerTurn = false;
         } else {
-            scoreText.textContent = `Round: ${playerSequence.length + 1} / ${gameSequence.length}`;
+            if (scoreText) scoreText.textContent = `Round: ${playerSequence.length + 1} / ${gameSequence.length}`;
         }
     }
 };
 
 // Main function to start the game
 const startGame = async () => {
+    console.log("Starting game...");
+
+    // Get DOM elements here to ensure they are available
+    statusText = document.getElementById('game-status');
+    scoreText = document.getElementById('score');
+    versionText = document.getElementById('game-version');
+    messageBox = document.getElementById('message-box');
+    messageText = document.getElementById('message-text');
+    messageCloseBtn = document.getElementById('message-close-btn');
+    sequenceDisplay = document.getElementById('sequence-display');
+    sequenceList = document.getElementById('sequence-list');
+    
+    // Add event listener to the message close button
+    if (messageCloseBtn) {
+        messageCloseBtn.addEventListener('click', hideMessage);
+    }
+    
     // Set the version text
     if (versionText) {
         versionText.textContent = `Version: ${VERSION}`;
     }
     
     // Wait for Tone.js to be ready before generating the sequence and starting the game
-    await Tone.start();
-    statusText.textContent = 'Game in Progress...';
-    generateSequence();
-    playSequence();
+    try {
+        await Tone.start();
+        if (statusText) statusText.textContent = 'Game in Progress...';
+        generateSequence();
+        playSequence();
+    } catch (e) {
+        console.error("Failed to start Tone.js:", e);
+        if (statusText) statusText.textContent = 'Error starting game.';
+    }
 };
 
 
 // Initialize all the action listeners
-initializeTapListener(recordPlayerInput);
-initializeHoldListener(recordPlayerInput);
-initializeSpeakListener(recordPlayerInput, showMessage);
-initializeTapMultipleListener(recordPlayerInput);
-initializeDragListener(recordPlayerInput);
+// These need to be called once, after the game has started.
+document.addEventListener('DOMContentLoaded', () => {
+    initializeTapListener(recordPlayerInput);
+    initializeHoldListener(recordPlayerInput);
+    initializeSpeakListener(recordPlayerInput, showMessage);
+    initializeTapMultipleListener(recordPlayerInput);
+    initializeDragListener(recordPlayerInput);
 
-// Start the game automatically when the page loads
-startGame();
+    // Start the game automatically when the page loads
+    startGame();
+});
+
