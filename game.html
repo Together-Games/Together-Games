@@ -228,3 +228,15 @@
       if (recognition) recognition.start();
       status.textContent = '🎧 Listening...';
     }
+
+    function stopMic() {
+      if (recognition) recognition.stop();
+      status.textContent = '🎙️ Stopped listening.';
+    }
+
+    micButton.addEventListener('mousedown', startMic);
+    micButton.addEventListener('mouseup', stopMic);
+    micButton.addEventListener('touchstart', startMic);
+    micButton.addEventListener('touchend', stopMic);
+
+   
