@@ -12,7 +12,7 @@ import { initializeTapMultipleListener } from './tapMultiple.js';
 import { initializeDragListener } from './drag.js';
 
 // Game version number
-const VERSION = 'v0.3';
+const VERSION = 'v0.4';
 
 // Game state variables
 let gameSequence = [];
@@ -249,19 +249,15 @@ const startGame = async () => {
         console.error("Failed to start Tone.js:", e);
         if (statusText) statusText.textContent = 'Error starting game.';
     }
-};
-
-
-// Initialize all the action listeners
-// These need to be called once, after the game has started.
-document.addEventListener('DOMContentLoaded', () => {
+    
+    // Initialize all the action listeners
     initializeTapListener(recordPlayerInput);
     initializeHoldListener(recordPlayerInput);
     initializeSpeakListener(recordPlayerInput, showMessage);
     initializeTapMultipleListener(recordPlayerInput);
     initializeDragListener(recordPlayerInput);
+};
 
-    // Start the game automatically when the page loads
-    startGame();
-});
 
+// Start the game automatically when the page loads
+startGame();
