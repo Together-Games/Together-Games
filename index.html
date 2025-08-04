@@ -41,12 +41,18 @@
             <button id="message-close-btn" class="mt-4 px-6 py-2 bg-sky-500 hover:bg-sky-600 rounded-lg text-white font-bold transition-colors">OK</button>
         </div>
 
+        <!-- Sequence Display Area -->
+        <div id="sequence-display" class="w-full bg-gray-700 p-4 rounded-xl hidden">
+            <h3 class="text-center font-bold text-lg mb-2">Current Sequence:</h3>
+            <ul id="sequence-list" class="list-disc list-inside space-y-1 text-gray-300"></ul>
+        </div>
+
         <!-- Buttons 1-4 -->
         <div id="button-section" class="grid grid-cols-2 gap-6 w-full">
             <button id="btn-1" class="btn bg-sky-600 hover:bg-sky-500 text-white font-bold py-10 px-4 rounded-xl shadow-lg transition-colors duration-200 active:scale-95">1</button>
             <button id="btn-2" class="btn bg-red-600 hover:bg-red-500 text-white font-bold py-10 px-4 rounded-xl shadow-lg transition-colors duration-200 active:scale-95">2</button>
             <button id="btn-3" class="btn bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-10 px-4 rounded-xl shadow-lg transition-colors duration-200 active:scale-95">3</button>
-            <button id="btn-4" class="btn bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-10 px-4 rounded-xl shadow-colors duration-200 active:scale-95">4</button>
+            <button id="btn-4" class="btn bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-10 px-4 rounded-xl shadow-lg transition-colors duration-200 active:scale-95">4</button>
         </div>
         
         <!-- Microphone Button & Drag/Drop Section -->

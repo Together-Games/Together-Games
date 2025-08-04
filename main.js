@@ -49,6 +49,8 @@ const scoreText = document.getElementById('score');
 const messageBox = document.getElementById('message-box');
 const messageText = document.getElementById('message-text');
 const messageCloseBtn = document.getElementById('message-close-btn');
+const sequenceDisplay = document.getElementById('sequence-display');
+const sequenceList = document.getElementById('sequence-list');
 
 // Show a message to the user
 const showMessage = (text) => {
@@ -76,16 +78,52 @@ const resetGame = () => {
     startButton.textContent = 'Start Game';
     statusText.textContent = 'Press Start to Play';
     scoreText.textContent = 'Round: 0';
+    sequenceDisplay.classList.add('hidden');
+    sequenceList.innerHTML = '';
 };
 
-// Function to generate the game sequence
+// Function to generate a fixed test sequence
 const generateSequence = () => {
-    gameSequence = [];
-    for (let i = 0; i < SEQUENCE_LENGTH; i++) {
-        const randomIndex = Math.floor(Math.random() * actionMapping.length);
-        gameSequence.push(actionMapping[randomIndex]);
-    }
+    gameSequence = [
+        { type: ACTIONS.TAP, id: 'btn-1' },
+        { type: ACTIONS.HOLD, id: 'btn-2' },
+        { type: ACTIONS.DRAG, id: 'up' },
+        { type: ACTIONS.TAP, id: 'btn-3' },
+        { type: ACTIONS.SPEAK, id: 'mic-btn' },
+        { type: ACTIONS.DRAG, id: 'left' },
+        { type: ACTIONS.TAP_MULTIPLE, id: 'buttons' },
+        { type: ACTIONS.TAP, id: 'btn-4' },
+        { type: ACTIONS.HOLD, id: 'btn-1' },
+        { type: ACTIONS.DRAG, id: 'down' }
+    ];
     console.log("Game Sequence:", gameSequence);
+    displaySequence();
+};
+
+// Function to display the sequence on the screen
+const displaySequence = () => {
+    sequenceList.innerHTML = '';
+    const actionDescriptions = {
+        'tap': 'Tap button',
+        'hold': 'Hold button',
+        'speak': 'Say "Simon"',
+        'tapMultiple': 'Tap and hold 2 buttons',
+        'drag': 'Drag circle to'
+    };
+
+    gameSequence.forEach(action => {
+        const li = document.createElement('li');
+        let description = actionDescriptions[action.type];
+        if (action.type === 'tap' || action.type === 'hold') {
+            description += ` ${action.id.split('-')[1]}`;
+        } else if (action.type === 'drag') {
+            description += ` ${action.id} square`;
+        }
+        li.textContent = description;
+        sequenceList.appendChild(li);
+    });
+
+    sequenceDisplay.classList.remove('hidden');
 };
 
 // Function to play the sequence for the user
