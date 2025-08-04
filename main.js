@@ -146,6 +146,12 @@ const playSequence = async () => {
             // Special animation for drag. We'll just flash the target square.
             element = document.getElementById(`drag-square-${action.id}`);
         }
+        
+        // Highlight the current action in the list
+        const currentItem = sequenceList.children[i];
+        if (currentItem) {
+            currentItem.classList.add('bg-gray-600', 'rounded-md', 'p-1', 'transition-colors');
+        }
 
         if (element) {
             // Apply animation based on action type
@@ -160,6 +166,11 @@ const playSequence = async () => {
             }
         }
         await new Promise(resolve => setTimeout(resolve, 500)); // Pause between actions
+
+        // Remove the highlight from the current action
+        if (currentItem) {
+            currentItem.classList.remove('bg-gray-600', 'rounded-md', 'p-1');
+        }
     }
 
     isAnimating = false;
