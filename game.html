@@ -57,12 +57,20 @@
       font-size: 24px;
       color: #c5c6c7;
     }
+
+    #sequenceDisplay {
+      margin-top: 20px;
+      font-size: 16px;
+      color: #66fcf1;
+      white-space: pre-wrap;
+    }
   </style>
 </head>
 <body>
   <h2>Alien Memory Challenge</h2>
-  <p><strong>Solution 1:</strong> [2, 4, 1, 3, 2, 1, 4, 3, 2, 1]</p>
-  <p id="sequenceDisplay">Repeat the sequence step-by-step.</p>
+  <p><strong>Solution 1:</strong></p>
+  <div id="sequenceDisplay"></div>
+  <p id="instruction">Repeat the sequence step-by-step.</p>
 
   <div class="button-grid">
     <button class="game-button" onclick="handleInput(1)">1</button>
@@ -86,6 +94,24 @@
     const correctSound = document.getElementById('correctSound');
     const incorrectSound = document.getElementById('incorrectSound');
     const status = document.getElementById('status');
+    const sequenceDisplay = document.getElementById('sequenceDisplay');
+
+    // 🧠 Show full sequence visually
+    sequenceDisplay.textContent = sequence.map((num, i) => `${i + 1}. ${num}`).join('\n');
+
+    function playSound(sound) {
+      if (sound) {
+        try {
+          sound.pause();
+          sound.currentTime = 0;
+          sound.play().catch(err => {
+            console.warn("Sound play blocked:", err);
+          });
+        } catch (e) {
+          console.error("Sound error:", e);
+        }
+      }
+    }
 
     function handleInput(num) {
       playerProgress.push(num);
@@ -130,7 +156,7 @@
         console.log("Heard:", transcript);
 
         if (transcript === 'zorgon') {
-          correctSound.play();
+          playSound(correctSound);
           currentStep++;
           playerProgress = [];
 
@@ -140,7 +166,7 @@
             status.textContent = `✅ Voice accepted! Now repeat ${currentStep + 1} steps.`;
           }
         } else {
-          incorrectSound.play();
+          playSound(incorrectSound);
           status.textContent = '❌ Wrong word! Try again.';
           currentStep = 0;
           playerProgress = [];
