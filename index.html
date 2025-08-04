@@ -95,12 +95,104 @@
 
   <!-- Drag Zone -->
   <div class="drag-zone">
-    <div class="drag-target top"></div>
-    <div class="drag-target bottom"></div>
-    <div class="drag-target left"></div>
-    <div class="drag-target right"></div>
+    <div class="drag-target top" data-zone="top"></div>
+    <div class="drag-target bottom" data-zone="bottom"></div>
+    <div class="drag-target left" data-zone="left"></div>
+    <div class="drag-target right" data-zone="right"></div>
     <div class="center-circle" id="draggable"></div>
   </div>
 
+  <script>
+    // Tap, Hold, Tap Multiple
+    const buttons = ["btn1", "btn2", "btn3", "btn4"];
+    buttons.forEach(id => {
+      const btn = document.getElementById(id);
+
+      // Tap
+      btn.addEventListener("touchstart", () => {
+        console.log(`Tap on button ${id}`);
+      });
+
+      // Hold
+      let holdTimer;
+      btn.addEventListener("touchstart", () => {
+        holdTimer = setTimeout(() => {
+          console.log(`Hold on button ${id}`);
+        }, 1000);
+      });
+
+      btn.addEventListener("touchend", () => {
+        clearTimeout(holdTimer);
+      });
+
+      // Tap Multiple
+      let tapCount = 0;
+      let lastTap = Date.now();
+      btn.addEventListener("touchstart", () => {
+        const now = Date.now();
+        if (now - lastTap < 500) {
+          tapCount++;
+          if (tapCount >= 3) {
+            console.log(`Tap Multiple on button ${id}`);
+            tapCount = 0;
+          }
+        } else {
+          tapCount = 1;
+        }
+        lastTap = now;
+      });
+    });
+
+    // Speak
+    document.getElementById("speak-button").addEventListener("click", () => {
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.lang = "en-US";
+      recognition.start();
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript.toLowerCase();
+        console.log("You said:", transcript);
+        if (transcript.includes("simon")) {
+          console.log("Speak action detected");
+        }
+      };
+
+      recognition.onerror = (e) => {
+        console.error("Speech recognition error:", e.error);
+      };
+    });
+
+    // Drag
+    const draggable = document.getElementById("draggable");
+    let offsetX, offsetY;
+
+    draggable.addEventListener("touchstart", (e) => {
+      const touch = e.touches[0];
+      offsetX = touch.clientX - draggable.offsetLeft;
+      offsetY = touch.clientY - draggable.offsetTop;
+    });
+
+    draggable.addEventListener("touchmove", (e) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      const x = touch.clientX - offsetX;
+      const y = touch.clientY - offsetY;
+      draggable.style.left = `${x}px`;
+      draggable.style.top = `${y}px`;
+
+      // Check if overlapping a target
+      document.querySelectorAll(".drag-target").forEach(target => {
+        const rect1 = draggable.getBoundingClientRect();
+        const rect2 = target.getBoundingClientRect();
+        const overlap = !(rect1.right < rect2.left || 
+                          rect1.left > rect2.right || 
+                          rect1.bottom < rect2.top || 
+                          rect1.top > rect2.bottom);
+        if (overlap) {
+          console.log(`Dragged into ${target.dataset.zone}`);
+        }
+      });
+    });
+  </script>
 </body>
 </html>
