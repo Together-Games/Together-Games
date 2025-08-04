@@ -2,6 +2,13 @@ export function setupDrag(draggableId, checkAction) {
   const draggable = document.getElementById(draggableId);
   let offsetX, offsetY;
 
+  // Store original position
+  const originalLeft = "75px";
+  const originalTop = "75px";
+
+  // Optional: add smooth transition for reset
+  draggable.style.transition = "top 0.3s ease, left 0.3s ease";
+
   draggable.addEventListener("touchstart", (e) => {
     const touch = e.touches[0];
     offsetX = touch.clientX - draggable.offsetLeft;
@@ -16,6 +23,7 @@ export function setupDrag(draggableId, checkAction) {
     draggable.style.left = `${x}px`;
     draggable.style.top = `${y}px`;
 
+    // Check for overlap with drag targets
     document.querySelectorAll(".drag-target").forEach(target => {
       const rect1 = draggable.getBoundingClientRect();
       const rect2 = target.getBoundingClientRect();
@@ -30,7 +38,8 @@ export function setupDrag(draggableId, checkAction) {
   });
 
   draggable.addEventListener("touchend", () => {
-    draggable.style.left = "75px";
-    draggable.style.top = "75px";
+    // Reset to original position
+    draggable.style.left = originalLeft;
+    draggable.style.top = originalTop;
   });
 }
