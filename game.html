@@ -30,6 +30,8 @@
       background-color: #45a29e;
       color: white;
       cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
     #micButton {
@@ -41,6 +43,7 @@
       color: #66fcf1;
       border: 2px solid #66fcf1;
       cursor: pointer;
+      user-select: none;
     }
 
     #dragZone {
@@ -107,6 +110,9 @@
 
   <div id="status"></div>
 
+  <audio id="correctSound" src="correct.mp3" preload="auto"></audio>
+  <audio id="incorrectSound" src="incorrect.mp3" preload="auto"></audio>
+
   <script>
     const sequence = [
       { type: 'tap', value: 2 },
@@ -122,59 +128,68 @@
     ];
 
     let currentStep = 0;
+    let inputBuffer = [];
     let multiHoldSet = new Set();
 
     const status = document.getElementById('status');
     const sequenceDisplay = document.getElementById('sequenceDisplay');
+    const correctSound = document.getElementById('correctSound');
+    const incorrectSound = document.getElementById('incorrectSound');
 
     sequenceDisplay.textContent = sequence.map((s, i) => `${i + 1}. ${s.type} → ${JSON.stringify(s.value)}`).join('\n');
 
-    function advanceStep() {
-      currentStep++;
-      multiHoldSet.clear();
-      if (currentStep >= sequence.length) {
-        status.textContent = '🎉 You Win!';
-      } else {
-        status.textContent = `✅ Step ${currentStep} complete.`;
+    function checkSequence() {
+      const expected = sequence.slice(0, inputBuffer.length);
+      const match = expected.every((step, i) => {
+        const input = inputBuffer[i];
+        if (!input || input.type !== step.type) return false;
+        if (step.type === 'multiHold') {
+          return step.value.every(v => input.value.includes(v));
+        }
+        return JSON.stringify(step.value) === JSON.stringify(input.value);
+      });
+
+      if (match && inputBuffer.length === currentStep + 1) {
+        correctSound.play();
+        currentStep++;
+        inputBuffer = [];
+        if (currentStep === sequence.length) {
+          status.textContent = '🎉 You Win!';
+        } else {
+          status.textContent = `✅ Step ${currentStep} complete. Repeat sequence.`;
+        }
+      } else if (!match) {
+        incorrectSound.play();
+        status.textContent = '❌ Incorrect! Start over.';
+        currentStep = 0;
+        inputBuffer = [];
       }
     }
 
-    function failStep() {
-      status.textContent = '❌ Incorrect! Try again.';
-      currentStep = 0;
-      multiHoldSet.clear();
-    }
-
-    function handleTap(num) {
-      const step = sequence[currentStep];
-      if (step.type === 'tap' && step.value === num) {
-        advanceStep();
-      } else {
-        failStep();
-      }
+    function addInput(type, value) {
+      inputBuffer.push({ type, value });
+      checkSequence();
     }
 
     ['btn1', 'btn2', 'btn3', 'btn4'].forEach(id => {
-      document.getElementById(id).addEventListener('click', () => {
-        handleTap(parseInt(id.replace('btn', '')));
-      });
+      const num = parseInt(id.replace('btn', ''));
+      const btn = document.getElementById(id);
 
-      document.getElementById(id).addEventListener('mousedown', () => {
-        multiHoldSet.add(parseInt(id.replace('btn', '')));
+      btn.addEventListener('click', () => addInput('tap', num));
+
+      btn.addEventListener('mousedown', () => {
+        multiHoldSet.add(num);
         checkMultiHold();
       });
 
-      document.getElementById(id).addEventListener('mouseup', () => {
-        multiHoldSet.delete(parseInt(id.replace('btn', '')));
-      });
+      btn.addEventListener('mouseup', () => multiHoldSet.delete(num));
     });
 
     function checkMultiHold() {
-      const step = sequence[currentStep];
-      if (step.type === 'multiHold') {
-        const required = new Set(step.value);
+      const required = new Set(sequence[currentStep]?.value || []);
+      if (sequence[currentStep]?.type === 'multiHold') {
         if (required.size === multiHoldSet.size && [...required].every(v => multiHoldSet.has(v))) {
-          advanceStep();
+          addInput('multiHold', [...multiHoldSet]);
         }
       }
     }
@@ -183,13 +198,7 @@
     let holdTimer;
     const holdButton = document.getElementById('holdButton');
     holdButton.addEventListener('mousedown', () => {
-      holdTimer = setTimeout(() => {
-        if (sequence[currentStep].type === 'hold') {
-          advanceStep();
-        } else {
-          failStep();
-        }
-      }, 2000);
+      holdTimer = setTimeout(() => addInput('hold', true), 2000);
     });
     holdButton.addEventListener('mouseup', () => clearTimeout(holdTimer));
 
@@ -206,50 +215,16 @@
 
       recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript.trim().toLowerCase();
-        const step = sequence[currentStep];
-        if (step.type === 'voice' && transcript === step.value) {
-          advanceStep();
-        } else {
-          failStep();
-        }
+        addInput('voice', transcript);
       };
 
-      recognition.onerror = () => failStep();
+      recognition.onerror = () => {
+        incorrectSound.play();
+        status.textContent = '❌ Mic error.';
+      };
     }
 
-    micButton.addEventListener('mousedown', () => {
+    function startMic() {
       if (recognition) recognition.start();
       status.textContent = '🎧 Listening...';
-    });
-
-    micButton.addEventListener('mouseup', () => {
-      if (recognition) recognition.stop();
-      status.textContent = '🎙️ Stopped listening.';
-    });
-
-    // Drag
-    const dragCircle = document.getElementById('dragCircle');
-    dragCircle.addEventListener('dragend', (e) => {
-      const dragZone = document.getElementById('dragZone');
-      const targets = dragZone.querySelectorAll('.target');
-      targets.forEach(target => {
-        const rect = target.getBoundingClientRect();
-        if (
-          e.clientX >= rect.left &&
-          e.clientX <= rect.right &&
-          e.clientY >= rect.top &&
-          e.clientY <= rect.bottom
-        ) {
-          const dir = target.dataset.dir;
-          const step = sequence[currentStep];
-          if (step.type === 'drag' && step.value === dir) {
-            advanceStep();
-          } else {
-            failStep();
-          }
-        }
-      });
-    });
-  </script>
-</body>
-</html>
+    }
