@@ -52,6 +52,24 @@ const messageCloseBtn = document.getElementById('message-close-btn');
 const sequenceDisplay = document.getElementById('sequence-display');
 const sequenceList = document.getElementById('sequence-list');
 
+// Tone.js setup for sound effects
+const correctSynth = new Tone.Synth({
+    oscillator: { type: 'sine' },
+    envelope: { attack: 0.05, decay: 0.1, sustain: 0.1, release: 0.2 }
+}).toDestination();
+const incorrectSynth = new Tone.Synth({
+    oscillator: { type: 'sawtooth' },
+    envelope: { attack: 0.05, decay: 0.1, sustain: 0.1, release: 0.2 }
+}).toDestination();
+
+const playCorrectSound = () => {
+    correctSynth.triggerAttackRelease("G5", "8n");
+};
+
+const playIncorrectSound = () => {
+    incorrectSynth.triggerAttackRelease("C3", "8n");
+};
+
 // Show a message to the user
 const showMessage = (text) => {
     messageText.textContent = text;
@@ -78,8 +96,8 @@ const resetGame = () => {
     startButton.textContent = 'Start Game';
     statusText.textContent = 'Press Start to Play';
     scoreText.textContent = 'Round: 0';
-    // Use direct style manipulation to hide the sequence
-    sequenceDisplay.style.display = 'none';
+    // Use direct style manipulation to hide the sequence, but we will not hide it anymore.
+    // sequenceDisplay.style.display = 'none';
     sequenceList.innerHTML = '';
 };
 
@@ -98,7 +116,7 @@ const generateSequence = () => {
         { type: ACTIONS.DRAG, id: 'down' }
     ];
     console.log("Game Sequence:", gameSequence);
-    displaySequence();
+    displaySequence(); // Display the sequence list immediately
 };
 
 // Function to display the sequence on the screen
@@ -124,58 +142,13 @@ const displaySequence = () => {
         sequenceList.appendChild(li);
     });
 
-    // Use direct style manipulation to show the sequence
+    // Ensure the sequence display is visible
     sequenceDisplay.style.display = 'block';
 };
 
-// Function to play the sequence for the user
+// Function to play the sequence for the user - now it just makes it the player's turn
 const playSequence = async () => {
-    isAnimating = true;
-    isPlayerTurn = false;
-    statusText.textContent = 'Simon is showing the sequence...';
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Delay before starting
-
-    for (let i = 0; i < gameSequence.length; i++) {
-        const action = gameSequence[i];
-        
-        // Find the corresponding element to animate
-        let element = null;
-        if (action.type === ACTIONS.TAP || action.type === ACTIONS.HOLD || action.type === ACTIONS.TAP_MULTIPLE) {
-            element = document.getElementById(action.id);
-        } else if (action.type === ACTIONS.SPEAK) {
-            element = document.getElementById('mic-btn');
-        } else if (action.type === ACTIONS.DRAG) {
-            // Special animation for drag. We'll just flash the target square.
-            element = document.getElementById(`drag-square-${action.id}`);
-        }
-        
-        // Highlight the current action in the list
-        const currentItem = sequenceList.children[i];
-        if (currentItem) {
-            currentItem.classList.add('bg-gray-600', 'rounded-md', 'p-1', 'transition-colors');
-        }
-
-        if (element) {
-            // Apply animation based on action type
-            if (action.type === ACTIONS.HOLD) {
-                element.classList.add('animate-pulse');
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                element.classList.remove('animate-pulse');
-            } else {
-                element.classList.add('scale-110', 'ring-4', 'ring-offset-2', 'ring-sky-400');
-                await new Promise(resolve => setTimeout(resolve, 500));
-                element.classList.remove('scale-110', 'ring-4', 'ring-offset-2', 'ring-sky-400');
-            }
-        }
-        await new Promise(resolve => setTimeout(resolve, 500)); // Pause between actions
-
-        // Remove the highlight from the current action
-        if (currentItem) {
-            currentItem.classList.remove('bg-gray-600', 'rounded-md', 'p-1');
-        }
-    }
-
-    isAnimating = false;
+    isAnimating = false; // No animation
     isPlayerTurn = true;
     playerSequence = [];
     statusText.textContent = 'Your turn!';
@@ -211,8 +184,10 @@ const checkInput = () => {
     if (!isCorrect) {
         // Game Over
         isPlayerTurn = false;
+        playIncorrectSound();
         showMessage(`Game Over! You failed at Round ${playerSequence.length}.`);
     } else {
+        playCorrectSound();
         // Correct input, continue
         if (playerSequence.length === gameSequence.length) {
             // Player won the round!
@@ -225,7 +200,9 @@ const checkInput = () => {
 };
 
 // Start Button Event Listener
-startButton.addEventListener('click', () => {
+startButton.addEventListener('click', async () => {
+    // Before starting, ensure Tone.js is ready for audio playback.
+    await Tone.start();
     startButton.disabled = true;
     startButton.textContent = 'Game in Progress...';
     generateSequence();
