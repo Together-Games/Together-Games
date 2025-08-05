@@ -12,13 +12,15 @@
     .dpad { display: grid; grid-template-columns: repeat(3, 60px); gap: 5px; justify-content: center; margin: 10px auto; }
     .dpad div { width: 60px; height: 60px; background: #eee; display: flex; align-items: center; justify-content: center; }
     #centerIcon { background: #ccc; }
-    #stepDisplay { font-size: 18px; margin: 20px; }
+    #stepDisplay, #sequenceDisplay { font-size: 18px; margin: 10px; }
+    #versionFooter { margin-top: 30px; font-size: 14px; color: #666; }
   </style>
 </head>
 <body>
 
 <h2>Simon Says</h2>
 <div id="stepDisplay">Step 1</div>
+<div id="sequenceDisplay">Sequence: </div>
 
 <div class="buttons">
   <button class="btn" id="btn1">1</button>
@@ -41,6 +43,8 @@
   <div></div>
 </div>
 
+<div id="versionFooter">v0.1</div>
+
 <script>
 const sequence = [
   { type: "tap", value: 1 },
@@ -60,9 +64,18 @@ let userInput = [];
 let holdTimers = {};
 let recognition;
 let isSpeaking = false;
+let version = 0.1;
 
 function showStep() {
   document.getElementById("stepDisplay").textContent = `Step ${currentStep + 1}`;
+  const currentSeq = sequence.slice(0, currentStep + 1)
+    .map(s => {
+      if (s.type === "tap" || s.type === "hold") return `${s.type}(${s.value})`;
+      if (s.type === "hold-multiple") return `hold-multiple(${s.value.join(",")})`;
+      if (s.type === "speak") return `speak("${s.value}")`;
+      if (s.type === "drag") return `drag(${s.value})`;
+    }).join(" → ");
+  document.getElementById("sequenceDisplay").textContent = `Sequence: ${currentSeq}`;
 }
 
 function checkInput() {
@@ -70,8 +83,15 @@ function checkInput() {
   if (JSON.stringify(userInput) === JSON.stringify(expected)) {
     userInput = [];
     currentStep++;
-    if (currentStep < sequence.length) showStep();
-    else alert("🎉 You completed the sequence!");
+    if (currentStep < sequence.length) {
+      showStep();
+    } else {
+      alert("🎉 You completed the sequence!");
+      currentStep = 0;
+      version = Math.round((version + 0.1) * 10) / 10;
+      document.getElementById("versionFooter").textContent = `v${version.toFixed(1)}`;
+      showStep();
+    }
   } else {
     alert("❌ Incorrect! Try again.");
     userInput = [];
@@ -134,7 +154,7 @@ document.getElementById("speakBtn").addEventListener("touchend", () => {
   }
 });
 
-// Drag
+// Drag (always active)
 ["up","down","left","right"].forEach(dir => {
   const el = document.getElementById(dir);
   let startY = 0, startX = 0;
@@ -149,7 +169,7 @@ document.getElementById("speakBtn").addEventListener("touchend", () => {
     let detected;
     if (absX > absY) detected = dx > 0 ? "right" : "left";
     else detected = dy > 0 ? "down" : "up";
-    if (detected === dir) registerAction("drag", dir);
+    registerAction("drag", detected);
   });
 });
 
