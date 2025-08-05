@@ -35,7 +35,6 @@
       width: 60px;
       height: 60px;
       font-size: 20px;
-      position: relative;
     }
     #speakBtn {
       margin: 10px;
@@ -103,7 +102,6 @@
 
 <div id="versionFooter">v0.1</div>
 
-<!-- 🔊 Sound Effects -->
 <audio id="correctSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
 <audio id="wrongSound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
 
@@ -247,5 +245,4 @@ document.getElementById("speakBtn").addEventListener("touchend", () => {
     startX = e.touches[0].clientX;
   });
   el.addEventListener("touchend", e => {
-    const dy = e.changedTouches[0].clientY - startY;
-    const dx = e.changedTouches[0].clientX -
+    const dy = e.changedTouches[0].clientY - startY
