@@ -5,15 +5,64 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Simon Says Game</title>
   <style>
-    body { font-family: sans-serif; text-align: center; padding: 20px; }
-    .buttons { display: flex; justify-content: center; gap: 10px; margin: 10px; }
-    .btn { width: 60px; height: 60px; font-size: 20px; }
-    #speakBtn { margin: 10px; padding: 10px 20px; }
-    .dpad { display: grid; grid-template-columns: repeat(3, 60px); gap: 5px; justify-content: center; margin: 10px auto; }
-    .dpad div { width: 60px; height: 60px; background: #eee; display: flex; align-items: center; justify-content: center; }
-    #centerIcon { background: #ccc; }
-    #stepDisplay, #sequenceDisplay { font-size: 18px; margin: 10px; }
-    #versionFooter { margin-top: 30px; font-size: 14px; color: #666; }
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 20px;
+      user-select: none; /* 🚫 Prevent text selection */
+      -webkit-user-select: none;
+    }
+    .buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 10px;
+    }
+    .btn {
+      width: 60px;
+      height: 60px;
+      font-size: 20px;
+      position: relative;
+    }
+    .countdown {
+      position: absolute;
+      bottom: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 14px;
+      color: #007bff;
+    }
+    #speakBtn {
+      margin: 10px;
+      padding: 10px 20px;
+    }
+    .dpad {
+      display: grid;
+      grid-template-columns: repeat(3, 60px);
+      gap: 5px;
+      justify-content: center;
+      margin: 10px auto;
+    }
+    .dpad div {
+      width: 60px;
+      height: 60px;
+      background: #eee;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #centerIcon {
+      background: #ccc;
+    }
+    #stepDisplay, #sequenceDisplay {
+      font-size: 18px;
+      margin: 10px;
+    }
+    #versionFooter {
+      margin-top: 30px;
+      font-size: 14px;
+      color: #666;
+    }
   </style>
 </head>
 <body>
@@ -62,6 +111,7 @@ const sequence = [
 let currentStep = 0;
 let userInput = [];
 let holdTimers = {};
+let countdownIntervals = {};
 let recognition;
 let isSpeaking = false;
 let version = 0.1;
@@ -110,11 +160,31 @@ function registerAction(type, value) {
   const btn = document.getElementById(`btn${n}`);
   btn.addEventListener("click", () => registerAction("tap", n));
 
-  // Hold
+  // Hold with countdown
   btn.addEventListener("touchstart", () => {
-    holdTimers[n] = setTimeout(() => registerAction("hold", n), 2000);
+    const countdown = document.createElement("div");
+    countdown.className = "countdown";
+    countdown.id = `countdown${n}`;
+    countdown.textContent = "2";
+    btn.appendChild(countdown);
+
+    let timeLeft = 2;
+    countdownIntervals[n] = setInterval(() => {
+      timeLeft -= 1;
+      countdown.textContent = timeLeft;
+      if (timeLeft <= 0) {
+        clearInterval(countdownIntervals[n]);
+        registerAction("hold", n);
+        btn.removeChild(countdown);
+      }
+    }, 1000);
   });
-  btn.addEventListener("touchend", () => clearTimeout(holdTimers[n]));
+
+  btn.addEventListener("touchend", () => {
+    clearInterval(countdownIntervals[n]);
+    const countdown = document.getElementById(`countdown${n}`);
+    if (countdown) countdown.remove();
+  });
 });
 
 // Hold Multiple
