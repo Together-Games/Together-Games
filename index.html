@@ -179,7 +179,7 @@ function registerAction(type, value) {
   const btn = document.getElementById(`btn${n}`);
   btn.addEventListener("click", () => registerAction("tap", n));
 
-  // Hold
+  // Hold with countdown
   btn.addEventListener("touchstart", () => {
     let timeLeft = 2.0;
     document.getElementById("countdownDisplay").textContent = `Hold: ${timeLeft.toFixed(1)}s`;
@@ -244,4 +244,5 @@ document.getElementById("speakBtn").addEventListener("touchend", () => {
     startY = e.touches[0].clientY;
     startX = e.touches[0].clientX;
   });
-  el.addEventListener("touchend", e =>
+  el.addEventListener("touchend", e => {
+    const dy = e.changedTouches[0].clientY - startY
