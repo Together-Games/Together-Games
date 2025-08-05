@@ -5,17 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Simon Says Game</title>
   <style>
+    * {
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
     body {
       font-family: sans-serif;
       text-align: center;
       padding: 20px;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-    button, .dpad div {
-      user-select: none;
-      -webkit-user-select: none;
-      -webkit-touch-callout: none;
     }
     .buttons {
       display: flex;
@@ -85,7 +83,7 @@
 
 <button id="speakBtn">🎤 Speak</button>
 
-<div class="dpad" id="dpad">
+<div class="dpad">
   <div></div>
   <div id="up">⬆️</div>
   <div></div>
@@ -115,11 +113,10 @@ const sequence = [
 
 let currentStep = 0;
 let userInput = [];
-let holdTimers = {};
-let countdownIntervals = {};
+let version = 0.1;
 let recognition;
 let isSpeaking = false;
-let version = 0.1;
+let heldButtons = new Set();
 
 function showStep() {
   document.getElementById("stepDisplay").textContent = `Step ${currentStep + 1}`;
@@ -167,36 +164,28 @@ function registerAction(type, value) {
 
   // Hold with countdown
   btn.addEventListener("touchstart", () => {
-    if (document.getElementById(`countdown${n}`)) return; // prevent duplicates
     const countdown = document.createElement("div");
     countdown.className = "countdown";
-    countdown.id = `countdown${n}`;
-    countdown.textContent = "2";
+    countdown.textContent = "2.0";
     btn.appendChild(countdown);
 
-    let timeLeft = 2;
-    countdownIntervals[n] = setInterval(() => {
-      timeLeft -= 0.5;
+    let timeLeft = 2.0;
+    const interval = setInterval(() => {
+      timeLeft -= 0.1;
       countdown.textContent = timeLeft.toFixed(1);
       if (timeLeft <= 0) {
-        clearInterval(countdownIntervals[n]);
+        clearInterval(interval);
         registerAction("hold", n);
         countdown.remove();
       }
-    }, 500);
+    }, 100);
+    btn.addEventListener("touchend", () => {
+      clearInterval(interval);
+      countdown.remove();
+    }, { once: true });
   });
 
-  btn.addEventListener("touchend", () => {
-    clearInterval(countdownIntervals[n]);
-    const countdown = document.getElementById(`countdown${n}`);
-    if (countdown) countdown.remove();
-  });
-});
-
-// Hold Multiple
-let heldButtons = new Set();
-[1,2,3,4].forEach(n => {
-  const btn = document.getElementById(`btn${n}`);
+  // Hold Multiple
   btn.addEventListener("touchstart", () => {
     heldButtons.add(n);
     if (heldButtons.size === 2) {
@@ -230,7 +219,7 @@ document.getElementById("speakBtn").addEventListener("touchend", () => {
   }
 });
 
-// Drag (always active)
+// Drag
 ["up","down","left","right"].forEach(dir => {
   const el = document.getElementById(dir);
   let startY = 0, startX = 0;
@@ -239,4 +228,18 @@ document.getElementById("speakBtn").addEventListener("touchend", () => {
     startX = e.touches[0].clientX;
   });
   el.addEventListener("touchend", e => {
-    const dy = e
+    const dy = e.changedTouches[0].clientY - startY;
+    const dx = e.changedTouches[0].clientX - startX;
+    const absX = Math.abs(dx), absY = Math.abs(dy);
+    let detected;
+    if (absX > absY) detected = dx > 0 ? "right" : "left";
+    else detected = dy > 0 ? "down" : "up";
+    registerAction("drag", detected);
+  });
+});
+
+showStep();
+</script>
+
+</body>
+</html>
