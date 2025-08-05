@@ -15,6 +15,16 @@
       text-align: center;
       padding: 20px;
     }
+    .header {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+    }
+    #countdownDisplay {
+      font-size: 18px;
+      color: #007bff;
+    }
     .buttons {
       display: flex;
       justify-content: center;
@@ -26,14 +36,6 @@
       height: 60px;
       font-size: 20px;
       position: relative;
-    }
-    .countdown {
-      position: absolute;
-      bottom: -20px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 14px;
-      color: #007bff;
     }
     #speakBtn {
       margin: 10px;
@@ -70,7 +72,11 @@
 </head>
 <body>
 
-<h2>Simon Says</h2>
+<div class="header">
+  <h2>Simon Says</h2>
+  <div id="countdownDisplay"></div>
+</div>
+
 <div id="stepDisplay">Step 1</div>
 <div id="sequenceDisplay">Sequence: </div>
 
@@ -97,6 +103,10 @@
 
 <div id="versionFooter">v0.1</div>
 
+<!-- 🔊 Sound Effects -->
+<audio id="correctSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+<audio id="wrongSound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
+
 <script>
 const sequence = [
   { type: "tap", value: 1 },
@@ -117,6 +127,13 @@ let version = 0.1;
 let recognition;
 let isSpeaking = false;
 let heldButtons = new Set();
+let countdownInterval;
+
+function playSound(id) {
+  const sound = document.getElementById(id);
+  sound.currentTime = 0;
+  sound.play();
+}
 
 function showStep() {
   document.getElementById("stepDisplay").textContent = `Step ${currentStep + 1}`;
@@ -133,6 +150,7 @@ function showStep() {
 function checkInput() {
   const expected = sequence.slice(0, currentStep + 1);
   if (JSON.stringify(userInput) === JSON.stringify(expected)) {
+    playSound("correctSound");
     userInput = [];
     currentStep++;
     if (currentStep < sequence.length) {
@@ -145,6 +163,7 @@ function checkInput() {
       showStep();
     }
   } else {
+    playSound("wrongSound");
     alert("❌ Incorrect! Try again.");
     userInput = [];
     currentStep = 0;
@@ -164,25 +183,22 @@ function registerAction(type, value) {
 
   // Hold with countdown
   btn.addEventListener("touchstart", () => {
-    const countdown = document.createElement("div");
-    countdown.className = "countdown";
-    countdown.textContent = "2.0";
-    btn.appendChild(countdown);
-
     let timeLeft = 2.0;
-    const interval = setInterval(() => {
+    document.getElementById("countdownDisplay").textContent = `Hold: ${timeLeft.toFixed(1)}s`;
+    countdownInterval = setInterval(() => {
       timeLeft -= 0.1;
-      countdown.textContent = timeLeft.toFixed(1);
+      document.getElementById("countdownDisplay").textContent = `Hold: ${timeLeft.toFixed(1)}s`;
       if (timeLeft <= 0) {
-        clearInterval(interval);
+        clearInterval(countdownInterval);
+        document.getElementById("countdownDisplay").textContent = "";
         registerAction("hold", n);
-        countdown.remove();
       }
     }, 100);
-    btn.addEventListener("touchend", () => {
-      clearInterval(interval);
-      countdown.remove();
-    }, { once: true });
+  });
+
+  btn.addEventListener("touchend", () => {
+    clearInterval(countdownInterval);
+    document.getElementById("countdownDisplay").textContent = "";
   });
 
   // Hold Multiple
@@ -207,7 +223,10 @@ document.getElementById("speakBtn").addEventListener("touchstart", () => {
     const word = event.results[0][0].transcript.trim().toLowerCase();
     const expected = sequence[currentStep].value;
     if (word === expected) registerAction("speak", word);
-    else alert(`❌ You said "${word}", expected "${expected}"`);
+    else {
+      playSound("wrongSound");
+      alert(`❌ You said "${word}", expected "${expected}"`);
+    }
   };
   recognition.start();
 });
@@ -229,17 +248,4 @@ document.getElementById("speakBtn").addEventListener("touchend", () => {
   });
   el.addEventListener("touchend", e => {
     const dy = e.changedTouches[0].clientY - startY;
-    const dx = e.changedTouches[0].clientX - startX;
-    const absX = Math.abs(dx), absY = Math.abs(dy);
-    let detected;
-    if (absX > absY) detected = dx > 0 ? "right" : "left";
-    else detected = dy > 0 ? "down" : "up";
-    registerAction("drag", detected);
-  });
-});
-
-showStep();
-</script>
-
-</body>
-</html>
+    const dx = e.changedTouches[0].clientX -
