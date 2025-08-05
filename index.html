@@ -1,0 +1,160 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Simon Says Game</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 20px; }
+    .buttons { display: flex; justify-content: center; gap: 10px; margin: 10px; }
+    .btn { width: 60px; height: 60px; font-size: 20px; }
+    #speakBtn { margin: 10px; padding: 10px 20px; }
+    .dpad { display: grid; grid-template-columns: repeat(3, 60px); gap: 5px; justify-content: center; margin: 10px auto; }
+    .dpad div { width: 60px; height: 60px; background: #eee; display: flex; align-items: center; justify-content: center; }
+    #centerIcon { background: #ccc; }
+    #stepDisplay { font-size: 18px; margin: 20px; }
+  </style>
+</head>
+<body>
+
+<h2>Simon Says</h2>
+<div id="stepDisplay">Step 1</div>
+
+<div class="buttons">
+  <button class="btn" id="btn1">1</button>
+  <button class="btn" id="btn2">2</button>
+  <button class="btn" id="btn3">3</button>
+  <button class="btn" id="btn4">4</button>
+</div>
+
+<button id="speakBtn">🎤 Speak</button>
+
+<div class="dpad" id="dpad">
+  <div></div>
+  <div id="up">⬆️</div>
+  <div></div>
+  <div id="left">⬅️</div>
+  <div id="centerIcon">🎯</div>
+  <div id="right">➡️</div>
+  <div></div>
+  <div id="down">⬇️</div>
+  <div></div>
+</div>
+
+<script>
+const sequence = [
+  { type: "tap", value: 1 },
+  { type: "hold", value: 2 },
+  { type: "drag", value: "up" },
+  { type: "speak", value: "magic" },
+  { type: "hold-multiple", value: [1, 3] },
+  { type: "tap", value: 4 },
+  { type: "drag", value: "left" },
+  { type: "speak", value: "start" },
+  { type: "hold", value: 3 },
+  { type: "hold-multiple", value: [2, 4] }
+];
+
+let currentStep = 0;
+let userInput = [];
+let holdTimers = {};
+let recognition;
+let isSpeaking = false;
+
+function showStep() {
+  document.getElementById("stepDisplay").textContent = `Step ${currentStep + 1}`;
+}
+
+function checkInput() {
+  const expected = sequence.slice(0, currentStep + 1);
+  if (JSON.stringify(userInput) === JSON.stringify(expected)) {
+    userInput = [];
+    currentStep++;
+    if (currentStep < sequence.length) showStep();
+    else alert("🎉 You completed the sequence!");
+  } else {
+    alert("❌ Incorrect! Try again.");
+    userInput = [];
+    currentStep = 0;
+    showStep();
+  }
+}
+
+function registerAction(type, value) {
+  userInput.push({ type, value });
+  if (userInput.length === currentStep + 1) checkInput();
+}
+
+// Tap
+[1,2,3,4].forEach(n => {
+  const btn = document.getElementById(`btn${n}`);
+  btn.addEventListener("click", () => registerAction("tap", n));
+
+  // Hold
+  btn.addEventListener("touchstart", () => {
+    holdTimers[n] = setTimeout(() => registerAction("hold", n), 2000);
+  });
+  btn.addEventListener("touchend", () => clearTimeout(holdTimers[n]));
+});
+
+// Hold Multiple
+let heldButtons = new Set();
+[1,2,3,4].forEach(n => {
+  const btn = document.getElementById(`btn${n}`);
+  btn.addEventListener("touchstart", () => {
+    heldButtons.add(n);
+    if (heldButtons.size === 2) {
+      setTimeout(() => {
+        registerAction("hold-multiple", Array.from(heldButtons).sort());
+        heldButtons.clear();
+      }, 2000);
+    }
+  });
+  btn.addEventListener("touchend", () => heldButtons.delete(n));
+});
+
+// Speak
+document.getElementById("speakBtn").addEventListener("touchstart", () => {
+  isSpeaking = true;
+  recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.lang = "en-US";
+  recognition.onresult = (event) => {
+    const word = event.results[0][0].transcript.trim().toLowerCase();
+    const expected = sequence[currentStep].value;
+    if (word === expected) registerAction("speak", word);
+    else alert(`❌ You said "${word}", expected "${expected}"`);
+  };
+  recognition.start();
+});
+
+document.getElementById("speakBtn").addEventListener("touchend", () => {
+  if (isSpeaking) {
+    recognition.stop();
+    isSpeaking = false;
+  }
+});
+
+// Drag
+["up","down","left","right"].forEach(dir => {
+  const el = document.getElementById(dir);
+  let startY = 0, startX = 0;
+  el.addEventListener("touchstart", e => {
+    startY = e.touches[0].clientY;
+    startX = e.touches[0].clientX;
+  });
+  el.addEventListener("touchend", e => {
+    const dy = e.changedTouches[0].clientY - startY;
+    const dx = e.changedTouches[0].clientX - startX;
+    const absX = Math.abs(dx), absY = Math.abs(dy);
+    let detected;
+    if (absX > absY) detected = dx > 0 ? "right" : "left";
+    else detected = dy > 0 ? "down" : "up";
+    if (detected === dir) registerAction("drag", dir);
+  });
+});
+
+showStep();
+</script>
+
+</body>
+</html>
