@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Challenge Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+            background-color: #f5f5f5;
+        }
+        
+        .game-container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .number-buttons {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+        }
+        
+        .number-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #4CAF50;
+            color: white;
+            font-size: 24px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s, background-color 0.3s;
+        }
+        
+        .number-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .number-btn.active {
+            background-color: #45a049;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
+        
+        .directional-pad {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 30px;
+        }
+        
+        .center-circle {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background-color: #2196F3;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            z-index: 2;
+            user-select: none;
+        }
+        
+        .direction {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background-color: #FF9800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+        }
+        
+        .up {
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 10px 10px 0 0;
+        }
+        
+        .down {
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 0 0 10px 10px;
+        }
+        
+        .left {
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            border-radius: 10px 0 0 10px;
+        }
+        
+        .right {
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            border-radius: 0 10px 10px 0;
+        }
+        
+        .active-direction {
+            background-color: #ff5722;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
+        
+        .speak-btn {
+            padding: 15px 30px;
+            background-color: #9C27B0;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: background-color 0.3s;
+        }
+        
+        .speak-btn:active {
+            background-color: #7B1FA2;
+        }
+        
+        .speak-btn.listening {
+            background-color: #E91E63;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .game-info {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+        }
+        
+        .sequence-display {
+            font-size: 18px;
+            margin-bottom: 10px;
+            min-height: 60px;
+            word-wrap: break-word;
+        }
+        
+        .feedback {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+            min-height: 30px;
+        }
+        
+        .correct {
+            color: #4CAF50;
+        }
+        
+        .incorrect {
+            color: #F44336;
+        }
+        
+        .progress {
+            margin-top: 15px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Memory Challenge</h1>
+        
+        <div class="game-info">
+            <div class="sequence-display" id="sequenceDisplay"></div>
+            <div class="feedback" id="feedback"></div>
+            <div class="progress" id="progress">Level: 1/10</div>
+        </div>
+        
+        <div class="number-buttons">
+            <button class="number-btn" id="btn1">1</button>
+            <button class="number-btn" id="btn2">2</button>
+            <button class="number-btn" id="btn3">3</button>
+            <button class="number-btn" id="btn4">4</button>
+        </div>
+        
+        <div class="directional-pad">
+            <div class="direction up" id="up">↑</div>
+            <div class="direction down" id="down">↓</div>
+            <div class="direction left" id="left">←</div>
+            <div class="direction right" id="right">→</div>
+            <div class="center-circle" id="centerCircle">Swipe</div>
+        </div>
+        
+        <button class="speak-btn" id="speakBtn">Speak</button>
+    </div>
+
+    <script>
+        // Game state
+        const gameState = {
+            sequence: [],
+            currentStep: 0,
+            playerSequence: [],
+            level: 1,
+            maxLevel: 10,
+            isListening: false,
+            recognition: null,
+            holdTimer: null,
+            words: ['apple', 'banana', 'cherry', 'dragon', 'elephant', 'flower', 'giraffe', 'happiness', 'island', 'jungle']
+        };
+        
+        // DOM elements
+        const elements = {
+            sequenceDisplay: document.getElementById('sequenceDisplay'),
+            feedback: document.getElementById('feedback'),
+            progress: document.getElementById('progress'),
+            btn1: document.getElementById('btn1'),
+            btn2: document.getElementById('btn2'),
+            btn3: document.getElementById('btn3'),
+            btn4: document.getElementById('btn4'),
+            up: document.getElementById('up'),
+            down: document.getElementById('down'),
+            left: document.getElementById('left'),
+            right: document.getElementById('right'),
+            centerCircle: document.getElementById('centerCircle'),
+            speakBtn: document.getElementById('speakBtn')
+        };
+        
+        // Initialize the game
+        function initGame() {
+            generateSequence();
+            updateDisplay();
+            setupEventListeners();
+        }
+        
+        // Generate a random sequence of actions
+        function generateSequence() {
+            gameState.sequence = [];
+            
+            for (let i = 0; i < gameState.maxLevel; i++) {
+                const actionType = Math.floor(Math.random() * 4); // 0-3
+                let action;
+                
+                switch(actionType) {
+                    case 0: // Press number
+                        action = {
+                            type: 'press',
+                            button: Math.floor(Math.random() * 4) + 1 // 1-4
+                        };
+                        break;
+                    case 1: // Swipe direction
+                        const directions = ['up', 'down', 'left', 'right'];
+                        action = {
+                            type: 'swipe',
+                            direction: directions[Math.floor(Math.random() * 4)]
+                        };
+                        break;
+                    case 2: // Speak word
+                        action = {
+                            type: 'speak',
+                            word: gameState.words[Math.floor(Math.random() * gameState.words.length)]
+                        };
+                        break;
+                    case 3: // Hold number
+                        action = {
+                            type: 'hold',
+                            button: Math.floor(Math.random() * 4) + 1, // 1-4
+                            duration: 2000 // 2 seconds
+                        };
+                        break;
+                }
+                
+                gameState.sequence.push(action);
+            }
+            
+            console.log("Generated sequence:", gameState.sequence);
+        }
+        
+        // Update the display with current game state
+        function updateDisplay() {
+            // Show the sequence up to the current level
+            let sequenceText = "Repeat this sequence:<br>";
+            for (let i = 0; i < gameState.level; i++) {
+                const action = gameState.sequence[i];
+                sequenceText += `${i+1}. ${actionToString(action)}<br>`;
+            }
+            elements.sequenceDisplay.innerHTML = sequenceText;
+            
+            // Update progress
+            elements.progress.textContent = `Level: ${gameState.level}/${gameState.maxLevel}`;
+            
+            // Clear feedback if not incorrect
+            if (!elements.feedback.classList.contains('incorrect')) {
+                elements.feedback.textContent = '';
+            }
+        }
+        
+        // Convert action to string for display
+        function actionToString(action) {
+            switch(action.type) {
+                case 'press': return `Press button ${action.button}`;
+                case 'swipe': return `Swipe ${action.direction}`;
+                case 'speak': return `Say "${action.word}"`;
+                case 'hold': return `Hold button ${action.button} for 2 seconds`;
+                default: return '';
+            }
+        }
+        
+        // Set up event listeners for all controls
+        function setupEventListeners() {
+            // Number buttons
+            elements.btn1.addEventListener('click', () => handleNumberButton(1));
+            elements.btn2.addEventListener('click', () => handleNumberButton(2));
+            elements.btn3.addEventListener('click', () => handleNumberButton(3));
+            elements.btn4.addEventListener('click', () => handleNumberButton(4));
+            
+            // Number button hold events
+            elements.btn1.addEventListener('mousedown', () => startHold(1));
+            elements.btn2.addEventListener('mousedown', () => startHold(2));
+            elements.btn3.addEventListener('mousedown', () => startHold(3));
+            elements.btn4.addEventListener('mousedown', () => startHold(4));
+            
+            elements.btn1.addEventListener('mouseup', endHold);
+            elements.btn2.addEventListener('mouseup', endHold);
+            elements.btn3.addEventListener('mouseup', endHold);
+            elements.btn4.addEventListener('mouseup', endHold);
+            
+            // For touch devices
+            elements.btn1.addEventListener('touchstart', () => startHold(1));
+            elements.btn2.addEventListener('touchstart', () => startHold(2));
+            elements.btn3.addEventListener('touchstart', () => startHold(3));
+            elements.btn4.addEventListener('touchstart', () => startHold(4));
+            
+            elements.btn1.addEventListener('touchend', endHold);
+            elements.btn2.addEventListener('touchend', endHold);
+            elements.btn3.addEventListener('touchend', endHold);
+            elements.btn4.addEventListener('touchend', endHold);
+            
+            // Directional pad
+            elements.centerCircle.addEventListener('mousedown', startSwipe);
+            elements.centerCircle.addEventListener('touchstart', startSwipe);
+            
+            // Speak button
+            elements.speakBtn.addEventListener('mousedown', startListening);
+            elements.speakBtn.addEventListener('mouseup', stopListening);
+            elements.speakBtn.addEventListener('touchstart', startListening);
+            elements.speakBtn.addEventListener('touchend', stopListening);
+        }
+        
+        // Handle number button press
+        function handleNumberButton(number) {
+            // Only process if we're not in a hold action
+            if (!gameState.holdTimer) {
+                const action = { type: 'press', button: number };
+                checkPlayerAction(action);
+                
+                // Visual feedback
+                const btn = document.getElementById(`btn${number}`);
+                btn.classList.add('active');
+                setTimeout(() => btn.classList.remove('active'), 200);
+            }
+        }
+        
+        // Start holding a number button
+        function startHold(number) {
+            gameState.holdTimer = setTimeout(() => {
+                const action = { type: 'hold', button: number };
+                checkPlayerAction(action);
+                gameState.holdTimer = null;
+                
+                // Visual feedback
+                const btn = document.getElementById(`btn${number}`);
+                btn.classList.add('active');
+                setTimeout(() => btn.classList.remove('active'), 200);
+            }, 2000);
+        }
+        
+        // End holding a number button (premature release)
+        function endHold() {
+            if (gameState.holdTimer) {
+                clearTimeout(gameState.holdTimer);
+                gameState.holdTimer = null;
+            }
+        }
+        
+        // Start swipe gesture
+        function startSwipe(e) {
+            e.preventDefault();
+            const touch = e.type === 'touchstart' ? e.touches[0] : e;
+            const startX = touch.clientX;
+            const startY = touch.clientY;
+            
+            function handleMove(moveEvent) {
+                moveEvent.preventDefault();
+                const moveTouch = moveEvent.type === 'touchmove' ? moveEvent.touches[0] : moveEvent;
+                const deltaX = moveTouch.clientX - startX;
+                const deltaY = moveTouch.clientY - startY;
+                
+                // Determine direction based on greatest delta
+                if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                    // Horizontal swipe
+                    if (deltaX > 0) {
+                        highlightDirection('right');
+                    } else {
+                        highlightDirection('left');
+                    }
+                } else {
+                    // Vertical swipe
+                    if (deltaY > 0) {
+                        highlightDirection('down');
+                    } else {
+                        highlightDirection('up');
+                    }
+                }
+            }
+            
+            function handleEnd(endEvent) {
+                endEvent.preventDefault();
+                document.removeEventListener('mousemove', handleMove);
+                document.removeEventListener('touchmove', handleMove);
+                document.removeEventListener('mouseup', handleEnd);
+                document.removeEventListener('touchend', handleEnd);
+                
+                const endTouch = endEvent.type === 'touchend' ? endEvent.changedTouches[0] : endEvent;
+                const deltaX = endTouch.clientX - startX;
+                const deltaY = endTouch.clientY - startY;
+                
+                // Determine final direction
+                let direction;
+                if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                    direction = deltaX > 0 ? 'right' : 'left';
+                } else {
+                    direction = deltaY > 0 ? 'down' : 'up';
+                }
+                
+                // Check if it's a valid swipe (minimum distance)
+                if (Math.abs(deltaX) > 20 || Math.abs(deltaY) > 20) {
+                    const action = { type: 'swipe', direction: direction };
+                    checkPlayerAction(action);
+                }
+                
+                // Remove highlight
+                removeDirectionHighlights();
+            }
+            
+            document.addEventListener('mousemove', handleMove);
+            document.addEventListener('touchmove', handleMove, { passive: false });
+            document.addEventListener('mouseup', handleEnd);
+            document.addEventListener('touchend', handleEnd);
+        }
+        
+        // Highlight a direction during swipe
+        function highlightDirection(direction) {
+            removeDirectionHighlights();
+            document.getElementById(direction).classList.add('active-direction');
+        }
+        
+        // Remove all direction highlights
+        function removeDirectionHighlights() {
+            elements.up.classList.remove('active-direction');
+            elements.down.classList.remove('active-direction');
+            elements.left.classList.remove('active-direction');
+            elements.right.classList.remove('active-direction');
+        }
+        
+        // Start listening for speech
+        function startListening() {
+            if (!gameState.isListening) {
+                gameState.isListening = true;
+                elements.speakBtn.classList.add('listening');
+                elements.feedback.textContent = 'Listening...';
+                
+                // Initialize speech recognition if available
+                if ('webkitSpeechRecognition' in window) {
+                    gameState.recognition = new webkitSpeechRecognition();
+                    gameState.recognition.continuous = false;
+                    gameState.recognition.interimResults = false;
+                    
+                    gameState.recognition.onresult = (event) => {
+                        const transcript = event.results[0][0].transcript.toLowerCase().trim();
+                        const action = { type: 'speak', word: transcript };
+                        checkPlayerAction(action);
+                    };
+                    
+                    gameState.recognition.onerror = (event) => {
+                        console.error('Speech recognition error', event.error);
+                        elements.feedback.textContent = 'Error: ' + event.error;
+                        elements.feedback.classList.add('incorrect');
+                        setTimeout(() => {
+                            elements.feedback.textContent = '';
+                            elements.feedback.classList.remove('incorrect');
+                        }, 2000);
+                    };
+                    
+                    gameState.recognition.start();
+                } else {
+                    // Fallback for browsers without speech recognition
+                    setTimeout(() => {
+                        const action = { type: 'speak', word: 'simulated' };
+                        checkPlayerAction(action);
+                    }, 1000);
+                }
+            }
+        }
+        
+        // Stop listening for speech
+        function stopListening() {
+            if (gameState.isListening) {
+                gameState.isListening = false;
+                elements.speakBtn.classList.remove('listening');
+                
+                if (gameState.recognition) {
+                    gameState.recognition.stop();
+                }
+            }
+        }
+        
+        // Check if player's action matches the sequence
+        function checkPlayerAction(playerAction) {
+            const currentAction = gameState.sequence[gameState.currentStep];
+            let isCorrect = false;
+            
+            // Compare actions based on type
+            if (playerAction.type === currentAction.type) {
+                switch(currentAction.type) {
+                    case 'press':
+                    case 'hold':
+                        isCorrect = playerAction.button === currentAction.button;
+                        break;
+                    case 'swipe':
+                        isCorrect = playerAction.direction === currentAction.direction;
+                        break;
+                    case 'speak':
+                        isCorrect = playerAction.word === currentAction.word;
+                        break;
+                }
+            }
+            
+            if (isCorrect) {
+                // Correct action
+                elements.feedback.textContent = 'Correct!';
+                elements.feedback.className = 'feedback correct';
+                
+                gameState.currentStep++;
+                
+                if (gameState.currentStep >= gameState.level) {
+                    // Completed the level
+                    setTimeout(() => {
+                        if (gameState.level < gameState.maxLevel) {
+                            gameState.level++;
+                            gameState.currentStep = 0;
+                            updateDisplay();
+                            elements.feedback.textContent = 'Level complete! Next level...';
+                        } else {
+                            // Game complete
+                            elements.feedback.textContent = 'Congratulations! You completed all levels!';
+                            elements.sequenceDisplay.textContent = 'Game Over';
+                        }
+                    }, 1000);
+                } else {
+                    // More steps in this level
+                    setTimeout(() => {
+                        elements.feedback.textContent = '';
+                    }, 1000);
+                }
+            } else {
+                // Incorrect action
+                elements.feedback.textContent = 'Incorrect! Try again.';
+                elements.feedback.className = 'feedback incorrect';
+                
+                // Reset for current level
+                setTimeout(() => {
+                    gameState.currentStep = 0;
+                    elements.feedback.textContent = '';
+                    elements.feedback.className = 'feedback';
+                }, 2000);
+            }
+        }
+        
+        // Start the game when page loads
+        window.addEventListener('load', initGame);
+    </script>
+</body>
+</html>
