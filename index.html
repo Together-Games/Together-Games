@@ -5,6 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Memory Challenge Game</title>
     <style>
+        /* Text selection prevention */
+        body {
+            -webkit-user-select: none; /* Safari */
+            -moz-user-select: none; /* Firefox */
+            -ms-user-select: none; /* IE10+/Edge */
+            user-select: none; /* Standard */
+        }
+        
+        .number-btn, .center-circle, .direction, .speak-btn {
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
         body {
             font-family: Arial, sans-serif;
             max-width: 500px;
@@ -73,7 +86,6 @@
             color: white;
             cursor: pointer;
             z-index: 2;
-            user-select: none;
         }
         
         .direction {
@@ -181,6 +193,12 @@
             margin-top: 15px;
             font-weight: bold;
         }
+        
+        .version {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #888;
+        }
     </style>
 </head>
 <body>
@@ -209,9 +227,25 @@
         </div>
         
         <button class="speak-btn" id="speakBtn">Speak</button>
+        
+        <!-- Version number will be inserted here by JavaScript -->
+        <div class="version" id="versionDisplay"></div>
     </div>
 
     <script>
+        // Version tracking
+        const gameVersion = {
+            major: 0,
+            minor: 1,
+            revision: 1,  // Increment this with each change
+            get versionString() {
+                return `v${this.major}.${this.minor}.${this.revision}`;
+            }
+        };
+        
+        // Display version
+        document.getElementById('versionDisplay').textContent = `Version: ${gameVersion.versionString}`;
+        
         // Game state
         const gameState = {
             sequence: [],
